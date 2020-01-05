@@ -1,0 +1,8 @@
+{
+"cookieFileName":"cookies.json",
+"stateFileName":"state.json",
+"tryMax":3,
+"parallelRequests":300,
+"dataDirName":"data",
+"verbose":true
+}

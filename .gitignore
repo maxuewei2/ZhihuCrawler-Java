@@ -1,0 +1,17 @@
+data/*.json
+target/
+新建文件夹/*
+state.json
+cookie*
+*.bin
+.idea/
+.git/
+*.zip
+*.log
+ff
+print
+*.lck
+pom1.xml
+*.iml
+create_zip.sh
+.fuse*
