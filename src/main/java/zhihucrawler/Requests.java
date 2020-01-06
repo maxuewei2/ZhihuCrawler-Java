@@ -13,6 +13,10 @@ class RequestNode {
     int totalRequestNum;
     int tryCount;
 
+    RequestNode(String user, String type) {
+        this(user,type,util.getUrl(user,type),0,-1,0);
+    }
+
     RequestNode(String user, String type, String url, int id, int totalRequestNum, int tryCount) {
         this.user = user;
         this.type = type;
@@ -70,7 +74,7 @@ class Requests{
         this.errorUsers=errorUsers;
         this.verbose=verbose;
         requestQueue=new LinkedBlockingQueue<>(workers*2);
-        requestQueue0=new LinkedBlockingQueue<>(workers*2);
+        requestQueue0=new LinkedBlockingQueue<>();
         responseQueue=new LinkedBlockingQueue<>(workers*2);
         dataQueue=new LinkedBlockingQueue<>(workers*2);
     }

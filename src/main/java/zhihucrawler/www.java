@@ -26,6 +26,10 @@ public class www{
     public static void main(String [] args) throws JsonProcessingException,InterruptedException, IOException {
         try{fun();}catch (IOException e){
             if(e.getMessage().equals("fdsfds"))util.print("llll");
+            throw new IOException();
+
+        }finally {
+            util.print("");
         }
 
         //ProxyProvider proxyProvider=new ProxyProvider(200);

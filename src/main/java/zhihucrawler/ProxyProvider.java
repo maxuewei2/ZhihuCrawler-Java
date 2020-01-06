@@ -140,7 +140,7 @@ class ProxyProvider {
                        //crawledProxies.add(proxyString);
                     }
                     //util.print(util.toJsonString(crawledProxies));
-                    Thread.sleep(100000);
+                    Thread.sleep(200000);
                 }
                 synchronized (this){
                     this.wait();

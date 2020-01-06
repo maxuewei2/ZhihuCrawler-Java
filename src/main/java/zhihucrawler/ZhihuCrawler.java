@@ -31,55 +31,22 @@ public class ZhihuCrawler {
     private ConcurrentHashMap<String, String> errorUsers;
 
     private ZhihuCrawler(String configFileName, String logFileName) throws IOException {
-        try {
-            util.setLogger(initLogger(logFileName));
-        } catch (IOException e) {
-            String msg = "Failed to write file " + logFileName;
-            util.logSevere(msg, e);
-            throw new IOException(msg, e);
-        }
-
-        try {
-            loadConfig(configFileName);
-        } catch (IOException e) {
-            String msg = "Failed to load config file " + configFileName;
-            util.logSevere(msg, e);
-            throw new IOException(msg, e);
-        }
-    }
-
-    private Logger initLogger(String logFileName) throws IOException {
-        Logger logger = Logger.getLogger("zh-crawler");
-        logger.setUseParentHandlers(false); //使不打印到终端
-
-        FileHandler fh = new FileHandler(logFileName, true); //日志append输出到文件
-        fh.setFormatter(new SimpleFormatter() {
-            private static final String format = "[%1$tF %1$tT] [%2$-7s] %3$s %n";
-
-            @Override
-            public synchronized String format(LogRecord lr) {
-                return String.format(format,
-                        new Date(lr.getMillis()),
-                        lr.getLevel().getLocalizedName(),
-                        lr.getMessage()
-                );
-            }
-        });
-        logger.addHandler(fh);
-        logger.setLevel(Level.ALL);
-        return logger;
-    }
-
-    private void loadConfig(String configFileName) throws IOException {
-        String content = util.loadFile(configFileName);
+        String content=loadConfig("config.json");
+        util.setLogger(initLogger(logFileName));
         util.logInfo("config: " + content);
+    }
+
+    private String loadConfig(String configFileName) throws IOException {
+        String content = util.loadFile(configFileName);
         this.config = util.loadJsonString(content, Config.class);
+        return content;
     }
 
     @SuppressWarnings("unchecked")
     private void loadState() throws IOException {
         String content = util.loadFile(config.stateFileName);
-        Map<String, Collection<?>> state = util.loadJsonString(content, new TypeReference<>() {});
+        Map<String, Collection<?>> state = util.loadJsonString(content, new TypeReference<>() {
+        });
 
         toVisit = new LinkedHashSet<>((List<String>) state.get("toVisit"));
         visited = new HashSet<>((List<String>) state.get("visited"));
@@ -107,7 +74,7 @@ public class ZhihuCrawler {
             util.writeFile(tmpFileName, util.toJsonString(tmp));  //写入临时文件
             Files.move(Paths.get(tmpFileName), Paths.get(config.stateFileName), StandardCopyOption.REPLACE_EXISTING);  //以临时文件覆盖state文件
 
-            util.logInfo("save state"+
+            util.logInfo("save state" +
                     "\n\ttoVisit " + toVisit.size() +
                     "\n\tvisited " + visited.size() +
                     "\n\twrited " + writed.size() +
@@ -123,17 +90,13 @@ public class ZhihuCrawler {
     private void startCrawler() throws IOException {
         loadState();
 
-        Requests requests = new Requests(config.cookieFileName, config.parallelRequests, config.tryMax, errorUsers,config.verbose);
-
-        PutUserRequests crawlUsers = new PutUserRequests(1, requests.getRequestQueue());
+        Requests requests = new Requests(config.cookieFileName, config.parallelRequests, config.tryMax, errorUsers, config.verbose);
 
         LinkedBlockingQueue<User> writeQueue = new LinkedBlockingQueue<>(config.parallelRequests);
 
-        new ConstructUsers((config.parallelRequests+200)/200, requests.getDataQueue(), writeQueue, errorUsers).startThreads();
+        new ConstructUsers((config.parallelRequests + 50) / 50, requests.getDataQueue(), writeQueue, errorUsers).startThreads();
 
         requests.startThreads();
-
-        crawlUsers.startThreads();
 
         new Thread(() -> {
             int i = 0;
@@ -147,7 +110,6 @@ public class ZhihuCrawler {
                         util.logInfo("\n\tvisited " + visited.size() +
                                 "\n\ttoVisit " + toVisit.size() +
                                 "\n\twrited " + writed.size() +
-                                "\n\ttoCrawlUsersQueue " + crawlUsers.getToCrawlUsersQueue().size() +
                                 "\n\trequestQueue " + requests.getRequestQueue().size() +
                                 "\n\trequestQueue0 " + requests.getRequestQueue0().size() +
                                 "\n\tresponseQueue " + requests.getResponseQueue().size() +
@@ -185,7 +147,7 @@ public class ZhihuCrawler {
                         util.logWarning("ERRORUSER FILENOTFOUND " + user.userID);
                     }
 
-                    LinkedList<String> friends = user.getFriendsFromElement();
+                    List<String> friends = user.getFriendsFromElement();
                     synchronized (this) {
                         writed.add(user.userID);
                         for (String friend : friends) {
@@ -195,8 +157,8 @@ public class ZhihuCrawler {
                         }
                     }
                     util.logInfo("writeUser " + user.userID);
-                    synchronized (crawlUsers.getToCrawlUsersQueue()){
-                        crawlUsers.getToCrawlUsersQueue().notify();
+                    synchronized (requests.getRequestQueue()) {
+                        requests.getRequestQueue().notify();
                     }
                     friends.clear();
                     user.followers.clear();
@@ -230,7 +192,7 @@ public class ZhihuCrawler {
                 LinkedList<String> tmp = new LinkedList<>();
                 synchronized (this) {
                     for (String user : toVisit) {
-                        if (crawlUsers.getToCrawlUsersQueue().offer(user)) {
+                        if (requests.getRequestQueue().offer(new RequestNode(user, "info"))) {
                             visited.add(user);
                             tmp.add(user);
                         } else {
@@ -239,10 +201,10 @@ public class ZhihuCrawler {
                     }
                     toVisit.removeAll(tmp);
                 }
-                tmp.clear();
-                synchronized (crawlUsers.getToCrawlUsersQueue()) {
-                    crawlUsers.getToCrawlUsersQueue().wait();
+                synchronized (requests.getRequestQueue()) {
+                    requests.getRequestQueue().wait();
                 }
+                tmp.clear();
             }
         } catch (InterruptedException e) {
             util.print("crawler interrupted");
@@ -250,6 +212,31 @@ public class ZhihuCrawler {
         }
     }
 
+    Logger initLogger(String logFileName) throws IOException {
+        Logger logger = Logger.getLogger("zh-crawler");
+        logger.setUseParentHandlers(false); //使不打印到终端
+
+        FileHandler fh = new FileHandler(logFileName, true); //日志append输出到文件
+        fh.setFormatter(new SimpleFormatter() {
+            private static final String format = "[%1$tF %1$tT] [%2$-7s] %3$s %n";
+
+            @Override
+            public synchronized String format(LogRecord lr) {
+                return String.format(format,
+                        new Date(lr.getMillis()),
+                        lr.getLevel().getLocalizedName(),
+                        lr.getMessage()
+                );
+            }
+        });
+        logger.addHandler(fh);
+        if (config.verbose) {
+            logger.setLevel(Level.ALL);
+        } else {
+            logger.setLevel(Level.WARNING);
+        }
+        return logger;
+    }
 
     public static void main(String[] args) {
         String logFileName = "zh-crawler.log";
@@ -257,7 +244,7 @@ public class ZhihuCrawler {
             ZhihuCrawler crawler = new ZhihuCrawler("config.json", logFileName);
             crawler.startCrawler();
         } catch (IOException e) {
-            util.logSevere("IO Exception", e);
+            util.logSevere("IOException", e);
         }
     }
 }

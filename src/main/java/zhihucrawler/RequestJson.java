@@ -10,7 +10,7 @@ public class RequestJson implements Runnable {
     private final BlockingQueue<RequestNode> requestQueue;
     private final BlockingQueue<RequestNode> requestQueue0;
     private final BlockingQueue<ResponseNode> responseQueue;
-    private final ConcurrentMap<String,String> errorUsers;
+    private final ConcurrentMap<String, String> errorUsers;
     private final Request request;
 
     RequestJson(CookieProvider cookieProvider,
@@ -19,9 +19,9 @@ public class RequestJson implements Runnable {
                 BlockingQueue<RequestNode> requestQueue,
                 BlockingQueue<RequestNode> requestQueue0,
                 BlockingQueue<ResponseNode> responseQueue,
-                ConcurrentMap<String,String> errorUsers,
+                ConcurrentMap<String, String> errorUsers,
                 boolean verbose) {
-        this.request=new Request(cookieProvider,proxyProvider,tryMax,verbose);
+        this.request = new Request(cookieProvider, proxyProvider, tryMax, verbose);
         this.requestQueue = requestQueue;
         this.requestQueue0 = requestQueue0;
         this.responseQueue = responseQueue;
@@ -31,34 +31,50 @@ public class RequestJson implements Runnable {
 
     @Override
     public void run() {
-        String url=null;
-        RequestNode requestNode=null;
+        RequestNode requestNode = null;
+        int httpErrorCount=0;
         try {
             //noinspection InfiniteLoopStatement
             while (true) {
-                if ((requestNode = requestQueue0.poll(1000, TimeUnit.MILLISECONDS)) == null) {
-                    requestNode = requestQueue.poll(1000, TimeUnit.MILLISECONDS);
-                    if(requestNode==null)continue;
+                boolean newRequestFlag=false;
+                if (requestNode == null) {
+                    if ((requestNode = requestQueue0.poll(1000, TimeUnit.MILLISECONDS)) == null) {
+                        requestNode = requestQueue.poll(1000, TimeUnit.MILLISECONDS);
+                        if (requestNode == null) continue;
+                        synchronized (requestQueue){
+                            requestQueue.notify();
+                        }
+                    }
+                    newRequestFlag=true;
                 }
-                String user = requestNode.user;
-                if (errorUsers.containsKey(user)) {
+                if (errorUsers.containsKey(requestNode.user)) {
+                    requestNode=null;
                     continue;
                 }
-                url= requestNode.url;
+
                 try {
-                    if(user.equals("tiancaomei")&&requestNode.type.equals("follower")){
-                        util.logInfo("RRRR5 "+url);
+                    HttpResponse<String> response;
+                    if (newRequestFlag) {
+                        response = request.request(requestNode.url);
+                    } else {
+                        response = request.request(requestNode.url, null);
+                        httpErrorCount=0;
                     }
-                    HttpResponse<String> response = request.request(url);
-                    int status = response.statusCode();
-                    String body = response.body();
-                    responseQueue.put(new ResponseNode(requestNode, status, body));
-                }catch (IOException e){
-                    requestQueue0.put(requestNode);
-                    if(e.getMessage().equals("Network Error")) {
-                        util.logSevere("HTTPNORESPONSE ");
-                        throw new InterruptedException();
+                    responseQueue.put(new ResponseNode(requestNode, response.statusCode(), response.body()));
+                    requestNode=null;
+                } catch (IOException e) {
+                    if (e.getMessage().equals("Network Error")) {
+                        Thread.sleep(500);
+                        if(httpErrorCount++>10) {
+                            util.logSevere("nonproxy HTTPNORESPONSE 10 times\nThread terminate.",e);
+                            errorUsers.put(requestNode.user, "Network Error");
+                            Thread.currentThread().interrupt();
+                        }
+                        util.logWarning("nonproxy HTTPNORESPONSE ",e);
+                    }else {
+                        util.logWarning("proxy HTTPNORESPONSE ", e);
                     }
+                    //requestQueue0.put(requestNode);
                 }
             }
         } catch (InterruptedException e) {

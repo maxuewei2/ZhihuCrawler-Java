@@ -1,12 +1,11 @@
 package zhihucrawler;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.ProxySelector;
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import java.net.http.*;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -37,8 +36,12 @@ class Request {
         return proxy;
     }
 
-    void changeProxy(){
+    void setChangeProxyFlag(){
         changeProxyFlag=true;
+    }
+
+    void changeProxy(){
+        setProxy(proxyProvider.getProxy());
     }
 
     void setProxy(Proxy proxy){
@@ -73,23 +76,48 @@ class Request {
     }
 
     private HttpResponse<String> sendRequest(String url) throws InterruptedException,IOException {
+        Throwable throwable=null;
         for (int i = 0; i < tryMax; i++) {
             try {
                 return sendGet(url);
             } catch (IOException e) {
-                assert true;
+                throwable=e;
             }
         }
-        throw new IOException();
+        throw new IOException(throwable);
+    }
+
+    HttpResponse<String> request(String url,Proxy pro) throws InterruptedException,IOException {
+        try {
+            return sendRequest(url);
+        }catch (IOException throwable){
+            String msg=throwable.getMessage();
+            /*if(throwable instanceof HttpConnectTimeoutException){
+                util.logWarning("HTTPException ConnectTimeOut "+pro+" "+msg);
+            }else if(throwable instanceof HttpTimeoutException){
+                util.logWarning("HTTPException TimeOut "+pro+" "+msg);
+            }else if(throwable instanceof ConnectException){
+                util.logWarning("HTTPException  "+pro+" "+msg);
+            }*/
+            util.logWarning("Request "+pro+" "+msg);
+            if(pro==null){
+                throw new IOException("Network Error",throwable);
+            }
+            pro.setError();
+            if(proxyProvider!=null) {
+                changeProxy();
+            }
+            throw new IOException("Proxy Network Error",throwable);
+        }
     }
 
     HttpResponse<String> request(String url) throws InterruptedException,IOException {
         if(proxyProvider!=null&&Duration.between(last,Instant.now()).toSeconds()>600){
-            setProxy(proxyProvider.getProxy());
+            changeProxy();
             last=Instant.now();
         }
         if(proxyProvider!=null&&changeProxyFlag){
-            setProxy(proxyProvider.getProxy());
+            changeProxy();
             changeProxyFlag=false;
         }
         if(proxyProvider!=null&&proxy==null){
@@ -98,20 +126,7 @@ class Request {
                 setProxy(tmp);
             }
         }
-
-        try {
-            return sendRequest(url);
-        }catch (IOException e){
-            if(proxy==null){
-                throw new IOException("Network Error");
-            }
-            if(proxyProvider!=null) {
-                proxy.setError();
-                proxy = proxyProvider.getProxy();
-                setProxy(proxy);
-            }
-            throw new IOException("Proxy Network Error");
-        }
+        return request(url,proxy);
     }
 
 }
