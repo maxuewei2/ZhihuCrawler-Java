@@ -42,7 +42,6 @@ class ProxyProvider {
     private final int minNum;
     private final int maxNum;
     //private final HashSet<String> crawledProxies;
-    private final Pattern pattern=Pattern.compile("alt=\"Cn\" /></td>\\s+<td>([^<]+)</td>\\s+<td>([^<]+)</td>");
 
     ProxyProvider(int minNum){
         this.minNum=minNum;
@@ -52,7 +51,9 @@ class ProxyProvider {
         new Thread(this::crawlProxies).start();
     }
 
+    /*解析页面获取代理列表*/
     private ArrayList<String> crawlPage(Request request, int pageNum) throws IOException, InterruptedException {
+        final Pattern pattern=Pattern.compile("alt=\"Cn\" /></td>\\s+<td>([^<]+)</td>\\s+<td>([^<]+)</td>");
         String url="https://www.xicidaili.com/wn/"+pageNum;
         HttpResponse<String> response=request.request(url);
 
@@ -70,8 +71,9 @@ class ProxyProvider {
         return proxyList;
     }
 
+    /*测试代理*/
     boolean test(String proxyString){
-        Request testRequest=new Request(null,null,1,true);
+        Request testRequest=new Request(null,null,1);
         testRequest.setProxy(new Proxy(proxyString));
         try {
             testRequest.request("https://www.zhihu.com");
@@ -83,6 +85,7 @@ class ProxyProvider {
         return true;
     }
 
+    /*测试代理列表，返回其中有效的代理*/
     ArrayList<String> check(ArrayList<String> proxyStrings)throws InterruptedException{
         //proxyStrings.removeAll(crawledProxies);
         int numProxies=proxyStrings.size();
@@ -108,9 +111,10 @@ class ProxyProvider {
         return proxyStrings;
     }
 
+    /*循环爬取代理网站1-20页，直到proxies中代理数量大于maxNum*/
     @SuppressWarnings("unchecked")
     private void crawlProxies(){
-        Request request=new Request(null,null,3,true);
+        Request request=new Request(null,null,3);
         request.setProxy(new Proxy("127.0.0.1:12333"));
         try {
             /*String content=util.loadFile("proxies.txt");
@@ -130,13 +134,9 @@ class ProxyProvider {
                     util.logInfo(newProxies.size()+" proxies on page "+pageNum);
                     util.logInfo("#proxies "+proxies.size());
                     pageNum=pageNum>20?1:pageNum;
-                    for(String proxyString:newProxies){
-                        Proxy proxy=new Proxy(proxyString);
-                        if(!proxies.offerLast(proxy,500, TimeUnit.MILLISECONDS)){
-                            fullFlag=true;
-                            break;
-                        }
-                        fullFlag|=(proxies.size()>maxNum);
+                    for(int i=0;i<newProxies.size()&&!fullFlag;i++){
+                        Proxy proxy=new Proxy(newProxies.get(i));
+                        fullFlag=(!proxies.offerLast(proxy,500, TimeUnit.MILLISECONDS))|(proxies.size()>maxNum);
                        //crawledProxies.add(proxyString);
                     }
                     //util.print(util.toJsonString(crawledProxies));
@@ -149,12 +149,13 @@ class ProxyProvider {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }catch (IOException e){
-            util.logSevere("Network Error",e);
+            util.logSevere("ProxyProvider Network Error",e);
             Thread.currentThread().interrupt();
         }
     }
 
 
+    /*获取代理，遇到失效代理则丢弃，否则放回队列*/
     Proxy getProxy(){
         util.logInfo("#proxies "+proxies.size());
         while(true) {

@@ -13,10 +13,10 @@ class User {
     public String userID;
     public String info;
     public List<String> followers;
-    //    public StringBuilder folowersCompleteInfo;
+    //public StringBuilder folowersCompleteInfo;
     private int followersICount = 0;
     public List<String> followees;
-    //    public StringBuilder foloweesCompleteInfo;
+    //public StringBuilder foloweesCompleteInfo;
     private int followeesICount = 0;
     public StringBuilder topics;
     private int topicsICount = 0;
@@ -24,6 +24,7 @@ class User {
     private int questionsICount = 0;
     private Instant lastUpdate;
     private ReentrantLock lock = new ReentrantLock();
+
     boolean isRemoved = false;
 
     //private static Pattern pattern = Pattern.compile("\"url_token\"\\s*:\\s*\"([^\"]+)\"");
@@ -40,6 +41,7 @@ class User {
         lock.unlock();
     }
 
+    /*用户的请求是否都已完成*/
     boolean isDone() {
         lock.lock();
         /*if (Duration.between(lastUpdate, Instant.now()).toSeconds() > 600) {
@@ -51,19 +53,6 @@ class User {
         lock.unlock();
         return f;
     }
-
-//    String getListStr(List<String> l) {
-//        String last = l.remove(l.size() - 1);
-//        StringBuffer buffer = new StringBuffer();
-//        buffer.append("[");
-//        for (String s : l) {
-//            buffer.append(s);
-//            buffer.append(",");
-//        }
-//        buffer.append(last);
-//        buffer.append("]");
-//        return buffer.toString();
-//    }
 
     @SuppressWarnings("unchecked")
     void set(String type, String content, int id, int totals) throws JsonProcessingException {
@@ -82,21 +71,21 @@ class User {
             lock.lock();
             if (type.equals("follower")) {
                 followers.addAll(tmp);
-//                if(folowersCompleteInfo==null){
-//                    folowersCompleteInfo=new StringBuilder(totals*20*200);
-//                }
-//                String del = folowersCompleteInfo.length()==0 ? "" : ",";
-//                folowersCompleteInfo.append(del).append(content, 1, content.length() - 1);
+                /*if(folowersCompleteInfo==null){
+                    folowersCompleteInfo=new StringBuilder(totals*20*200);
+                }
+                String del = folowersCompleteInfo.length()==0 ? "" : ",";
+                folowersCompleteInfo.append(del).append(content, 1, content.length() - 1);*/
                 if (followersICount != -1 && ++followersICount >= totals) {
                     followersICount = -1;
                 }
             } else {
                 followees.addAll(tmp);
-//                if(foloweesCompleteInfo==null){
-//                    foloweesCompleteInfo=new StringBuilder(totals*20*200);
-//                }
-//                String del = foloweesCompleteInfo.length()==0 ? "" : ",";
-//                foloweesCompleteInfo.append(del).append(content, 1, content.length() - 1);
+                /*if(foloweesCompleteInfo==null){
+                    foloweesCompleteInfo=new StringBuilder(totals*20*200);
+                }
+                String del = foloweesCompleteInfo.length()==0 ? "" : ",";
+                foloweesCompleteInfo.append(del).append(content, 1, content.length() - 1);*/
                 if (followeesICount != -1 && ++followeesICount >= totals) {
                     followeesICount = -1;
                 }
@@ -133,7 +122,7 @@ class User {
         }
     }
 
-    List<String> getFriendsFromElement() {
+    List<String> getFriends() {
         lock.lock();
         ArrayList<String> friends = new ArrayList<>(followees.size() + followers.size() + 1000);
         friends.addAll(followees);
@@ -142,15 +131,16 @@ class User {
         return friends;
     }
 
-    public String getString() throws JsonProcessingException {
+    /*获取用户数据的json表示*/
+    public String getJsonString() throws JsonProcessingException {
         lock.lock();
         try {
             String followersString = util.toJsonString(followers).replaceAll(",", ",\n");
             String followeesString = util.toJsonString(followees).replaceAll(",", ",\n");
-//            String res = String.format("{\n\"userID\":\"%s\",\n\"info\":%s,\n" +
-//                            "\"followers\":%s,\n\"followees\":%s,\n\"topics\":[%s],\n\"questions\":[%s],\n" +
-//                            "\"followersCompleteInfo\":[%s],\n\"followeesCompleteInfo\":[%s]}",
-//                    userID, info, followersString, followeesString, topics, questions, folowersCompleteInfo, foloweesCompleteInfo);
+            /*String res = String.format("{\n\"userID\":\"%s\",\n\"info\":%s,\n" +
+                            "\"followers\":%s,\n\"followees\":%s,\n\"topics\":[%s],\n\"questions\":[%s],\n" +
+                            "\"followersCompleteInfo\":[%s],\n\"followeesCompleteInfo\":[%s]}",
+                    userID, info, followersString, followeesString, topics, questions, folowersCompleteInfo, foloweesCompleteInfo);*/
             String res = String.format("{\n\"userID\":\"%s\",\n\"info\":%s,\n" +
                             "\"followers\":%s,\n\"followees\":%s,\n\"topics\":[%s],\n\"questions\":[%s]\n}",
                     userID, info, followersString, followeesString, topics, questions);
@@ -162,13 +152,20 @@ class User {
         }
     }
 
-    String getString1() {
+
+    String getString() {
         lock.lock();
-//        String res = String.format("%s%s%s%s%s%s",
-//                userID, info, topics, questions, folowersCompleteInfo, foloweesCompleteInfo);
-        String res = String.format("%s%s%s%s",
-                userID, info, topics, questions);
+        String res = String.format("(%s %s %d %d %d %d)",
+                userID, info == null, followersICount, followeesICount, topicsICount, questionsICount);
         lock.unlock();
         return res;
     }
+/*
+    String getString() {
+        lock.lock();
+        String res = String.format("%s%s%s%s%s%s",
+                userID, info, topics, questions, folowersCompleteInfo, foloweesCompleteInfo);
+        lock.unlock();
+        return res;
+    }*/
 }

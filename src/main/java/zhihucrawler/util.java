@@ -15,6 +15,11 @@ import java.util.logging.*;
 
 public class util {
     private static Logger logger=Logger.getLogger("default");
+
+    static void setLogger(Logger logger) {
+        util.logger = logger;
+    }
+
     private static ObjectMapper mapper=new ObjectMapper();
     static{
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
@@ -36,18 +41,20 @@ public class util {
         formatMap.put("question",questionFormat);
     }
 
+    /*
+    给定用户和请求类型，返回url，
+    * 注： url的offset为0
+    * */
     static String getUrl(String user,String type){
         String prefix="https://www.zhihu.com/api/v4/";
         return prefix+String.format(formatMap.get(type),user);
     }
 
 
+
+
     static void print(String msg){
         System.out.println(msg);
-    }
-
-    static void setLogger(Logger logger) {
-        util.logger = logger;
     }
 
     static String getStackTrace(Throwable e){
@@ -77,6 +84,8 @@ public class util {
     static void logInfo(String msg){
         logger.log(Level.INFO, msg);
     }
+
+
 
     static String loadFile(String fileName) throws IOException{
         return new String(Files.readAllBytes(Paths.get(fileName)));

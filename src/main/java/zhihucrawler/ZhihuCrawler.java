@@ -3,7 +3,6 @@ package zhihucrawler;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
@@ -12,45 +11,45 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.*;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 
-/*
-TODO
-get info first, then get followers according to follower_count
-proxy
-遇到一次toCrawlQueue的死锁问题，一个在wait，一个等take后notify
-*/
-
 public class ZhihuCrawler {
     private Config config;
-    private LinkedList<String> writed;
-    private HashSet<String> visited;
-    private LinkedHashSet<String> toVisit;
-    private ConcurrentHashMap<String, String> errorUsers;
+    private LinkedList<String> writed; //存储已写入的用户集合
+    private LinkedHashSet<String> visited;  //存储已写入及已放入request队列的用户
+    private LinkedHashSet<String> toVisit;  //存储待访问的用户
+    private ConcurrentHashMap<String, String> errorUsers;  //存储出错的用户
 
     private ZhihuCrawler(String configFileName, String logFileName) throws IOException {
-        String content=loadConfig("config.json");
+        String content=loadConfig(configFileName);
         util.setLogger(initLogger(logFileName));
         util.logInfo("config: " + content);
     }
 
+    /*读取配置文件*/
     private String loadConfig(String configFileName) throws IOException {
         String content = util.loadFile(configFileName);
         this.config = util.loadJsonString(content, Config.class);
         return content;
     }
 
+    /*读取之前的进度并恢复进度*/
     @SuppressWarnings("unchecked")
     private void loadState() throws IOException {
         String content = util.loadFile(config.stateFileName);
         Map<String, Collection<?>> state = util.loadJsonString(content, new TypeReference<>() {
         });
 
-        toVisit = new LinkedHashSet<>((List<String>) state.get("toVisit"));
-        visited = new HashSet<>((List<String>) state.get("visited"));
+        /*因visited包含writed和在request队列中的用户，所以上次终止程序时队列中的用户都没写入文件，需要重新请求*/
+        visited = new LinkedHashSet<>((List<String>) state.get("visited"));
         writed = new LinkedList<>((List<String>) state.get("writed"));
+        visited.removeAll(writed);
+        toVisit = new LinkedHashSet<>(visited);
+        toVisit.addAll((List<String>) state.get("toVisit"));
+        visited.clear();
+        visited.addAll(writed);
+
         List<Map<String, String>> tmp = (List<Map<String, String>>) state.get("errorUsers");
         errorUsers = new ConcurrentHashMap<>(tmp.size() * 3);
         for (Map<String, String> e : tmp) {
@@ -63,6 +62,7 @@ public class ZhihuCrawler {
                 "\n\terrorUsers " + errorUsers.size());
     }
 
+    /*保存当前进度到一个json文件*/
     private void saveState() {
         HashMap<String, Collection<?>> tmp = new HashMap<>();
         tmp.put("toVisit", toVisit);
@@ -72,7 +72,8 @@ public class ZhihuCrawler {
         try {
             String tmpFileName = config.stateFileName + ".tmp";
             util.writeFile(tmpFileName, util.toJsonString(tmp));  //写入临时文件
-            Files.move(Paths.get(tmpFileName), Paths.get(config.stateFileName), StandardCopyOption.REPLACE_EXISTING);  //以临时文件覆盖state文件
+            //以临时文件覆盖state文件
+            Files.move(Paths.get(tmpFileName), Paths.get(config.stateFileName), StandardCopyOption.REPLACE_EXISTING);
 
             util.logInfo("save state" +
                     "\n\ttoVisit " + toVisit.size() +
@@ -89,8 +90,10 @@ public class ZhihuCrawler {
 
     private void startCrawler() throws IOException {
         loadState();
-
-        Requests requests = new Requests(config.cookieFileName, config.parallelRequests, config.tryMax, errorUsers, config.verbose);
+        /*
+        * main -> Requests.requestQueue -> Requests.dataQueue -> writeQueue -> files
+        * */
+        Requests requests = new Requests(config.cookieFileName, config.parallelRequests, config.tryMax, errorUsers);
 
         LinkedBlockingQueue<User> writeQueue = new LinkedBlockingQueue<>(config.parallelRequests);
 
@@ -98,6 +101,11 @@ public class ZhihuCrawler {
 
         requests.startThreads();
 
+        /*监测线程
+        * - 定时gc
+        * - 定时打印数据情况
+        * - 到一定时间退出程序
+        * */
         new Thread(() -> {
             int i = 0;
             while (true) {
@@ -130,6 +138,10 @@ public class ZhihuCrawler {
             }
         }).start();
 
+        /*写数据线程
+        * - 从writeQueue取用户数据并写入文件
+        * - 将该用户的好友加入toVisit集合
+        * - 保存当前进度*/
         new Thread(() -> {
             try {
                 Instant last = Instant.now();
@@ -138,7 +150,7 @@ public class ZhihuCrawler {
 
                     String fileName = config.dataDirName + "/" + user.userID + ".json";
                     try {
-                        util.writeFile(fileName, user.getString());
+                        util.writeFile(fileName, user.getJsonString());
                     } catch (JsonProcessingException e) {
                         errorUsers.put(user.userID, "JSON PROCESSING 4");
                         util.logWarning("ERRORUSER JSON PROCESSING " + user.userID);
@@ -147,7 +159,7 @@ public class ZhihuCrawler {
                         util.logWarning("ERRORUSER FILENOTFOUND " + user.userID);
                     }
 
-                    List<String> friends = user.getFriendsFromElement();
+                    List<String> friends = user.getFriends();
                     synchronized (this) {
                         writed.add(user.userID);
                         for (String friend : friends) {
@@ -180,6 +192,7 @@ public class ZhihuCrawler {
             }
         }).start();
 
+        /*将toVisit中的用户加入Requests的队列*/
         try {
             /*for (String user : errorUsers.keySet()) {
                 crawlUsers.getToCrawlUsersQueue().put(user);
@@ -192,6 +205,7 @@ public class ZhihuCrawler {
                 LinkedList<String> tmp = new LinkedList<>();
                 synchronized (this) {
                     for (String user : toVisit) {
+                        //所有用户都是先请求info数据，然后根据info构造其他数据请求
                         if (requests.getRequestQueue().offer(new RequestNode(user, "info"))) {
                             visited.add(user);
                             tmp.add(user);
@@ -239,12 +253,12 @@ public class ZhihuCrawler {
     }
 
     public static void main(String[] args) {
-        String logFileName = "zh-crawler.log";
         try {
-            ZhihuCrawler crawler = new ZhihuCrawler("config.json", logFileName);
+            ZhihuCrawler crawler = new ZhihuCrawler("config.json", "zh-crawler.log");
             crawler.startCrawler();
         } catch (IOException e) {
             util.logSevere("IOException", e);
+            System.exit(-1);
         }
     }
 }

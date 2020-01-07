@@ -17,14 +17,11 @@ class Request {
     private HttpClient httpClient;
     private Proxy proxy;
     private Instant last=Instant.now();
-    private volatile boolean changeProxyFlag=false;
-    private final boolean verbose;
 
-    Request(CookieProvider cookieProvider,ProxyProvider proxyProvider,int tryMax,boolean verbose){
+    Request(CookieProvider cookieProvider,ProxyProvider proxyProvider,int tryMax){
         this.cookieProvider=cookieProvider;
         this.proxyProvider=proxyProvider;
         this.tryMax = tryMax;
-        this.verbose=verbose;
         if(proxyProvider!=null){
             setProxy(proxyProvider.getProxy());
         }else{
@@ -36,14 +33,6 @@ class Request {
         return proxy;
     }
 
-    void setChangeProxyFlag(){
-        changeProxyFlag=true;
-    }
-
-    void changeProxy(){
-        setProxy(proxyProvider.getProxy());
-    }
-
     void setProxy(Proxy proxy){
         this.proxy=proxy;
         HttpClient.Builder clientBuilder=HttpClient.newBuilder()
@@ -52,6 +41,17 @@ class Request {
             clientBuilder.proxy(ProxySelector.of(new InetSocketAddress(proxy.getIP(), proxy.getPort())));
         }
         httpClient=clientBuilder.build();
+    }
+
+    boolean changeProxy(){
+        last=Instant.now();
+        if(proxyProvider==null){return false;}
+        Proxy tmp=proxyProvider.getProxy();
+        if(tmp!=proxy){
+            setProxy(tmp);
+            return true;
+        }
+        return false;
     }
 
     private HttpResponse<String> sendGet(String url) throws IOException, InterruptedException {
@@ -67,9 +67,7 @@ class Request {
             if (cookie != null) {
                 builder.setHeader("Cookie", cookie.getCookieString());
             }
-            if(verbose){
-                util.logInfo(Thread.currentThread().getName()+" using "+cookie+" "+proxy+" getting " + url);
-            }
+            util.logInfo(Thread.currentThread().getName()+" using "+cookie+" "+proxy+" getting " + url);
         }
         HttpRequest request =builder.build();
         return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
@@ -104,27 +102,19 @@ class Request {
                 throw new IOException("Network Error",throwable);
             }
             pro.setError();
-            if(proxyProvider!=null) {
-                changeProxy();
-            }
             throw new IOException("Proxy Network Error",throwable);
         }
     }
 
     HttpResponse<String> request(String url) throws InterruptedException,IOException {
-        if(proxyProvider!=null&&Duration.between(last,Instant.now()).toSeconds()>600){
+        //间隔一段时间换一下代理
+        if(Duration.between(last,Instant.now()).toSeconds()>600){
             changeProxy();
-            last=Instant.now();
         }
-        if(proxyProvider!=null&&changeProxyFlag){
+        //proxy为null时表示未使用代理
+        //尽量使用代理
+        if(proxy==null){
             changeProxy();
-            changeProxyFlag=false;
-        }
-        if(proxyProvider!=null&&proxy==null){
-            Proxy tmp=proxyProvider.getProxy();
-            if(tmp!=null){
-                setProxy(tmp);
-            }
         }
         return request(url,proxy);
     }

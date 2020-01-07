@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/*对应知乎返回的json数据的paging部分*/
 class Paging {
     public boolean is_end;
     public boolean is_start;
@@ -19,6 +20,7 @@ class Paging {
     public int totals;
 }
 
+/*对应知乎返回json数据的格式*/
 class ResponseContent {
     public Paging paging;
     public List<Map<String, Object>> data;
@@ -27,6 +29,8 @@ class ResponseContent {
 public class ResponseExtractor implements Runnable {
     private static final AtomicInteger receivedBytesNum = new AtomicInteger(0);
     private static final AtomicInteger receivedMBNum = new AtomicInteger(0);
+    private static Instant last = Instant.now();
+
     private final BlockingQueue<RequestNode> requestQueue0;
     private final BlockingQueue<ResponseNode> responseQueue;
     private final BlockingQueue<DataNode> dataQueue;
@@ -43,21 +47,22 @@ public class ResponseExtractor implements Runnable {
         this.errorUsers = errorUsers;
     }
 
+    /*从info数据中提取其他数据的总数，并提交请求*/
     private void putJsonRequestUrls(String user, Map<String, Object> info) throws InterruptedException {
-        String[] types = {"follower", "followee", "topic", "question"};
-        String[] infoKey = {"follower_count", "following_count", "following_topic_count", "following_question_count"};
         if (user == null) {
             return;
         }
-        for (int i = 0; i < 4; i++) {
+        String[] types = {"follower", "followee", "topic", "question"};
+        String[] infoKey = {"follower_count", "following_count", "following_topic_count", "following_question_count"};
+        for (int i = 0; i < types.length; i++) {
             String type = types[i];
-            String url = util.getUrl(user, type);
             int totals = (int) info.get(infoKey[i]);
             if (totals == 0) {
                 dataQueue.put(new DataNode(user, type, 0, 0, "[]"));
                 continue;
             }
             int totalRequestNum = (totals - 1) / 20 + 1;
+            String url = util.getUrl(user, type);
             for (int j = 0; j < totalRequestNum; j++) {
                 String newUrl = url.replace("offset=0", "offset=" + (j * 20));
                 requestQueue0.put(new RequestNode(user, type, newUrl, j, totalRequestNum, 0));
@@ -67,7 +72,7 @@ public class ResponseExtractor implements Runnable {
 
     @Override
     public void run() {
-        Instant last = Instant.now();
+
         try {
             //noinspection InfiniteLoopStatement
             while (true) {
@@ -82,6 +87,8 @@ public class ResponseExtractor implements Runnable {
                 int oldTotalRequestNum = requestNode.totalRequestNum;
                 int tryCount = requestNode.tryCount;
 
+                /*累计收到的数据大小，每获取10MB，计算请求速度，并打印*/
+
                 if (receivedBytesNum.addAndGet(body.length()) > 10000000) {
                     synchronized (receivedBytesNum) {
                         if (receivedBytesNum.get() > 10000000) {
@@ -89,15 +96,15 @@ public class ResponseExtractor implements Runnable {
                                 int tmp = receivedBytesNum.get();
                                 if (receivedBytesNum.compareAndSet(tmp, tmp % 10000000)) break;
                             }
-                            receivedMBNum.addAndGet(10);
-                            util.print(receivedMBNum + " MB data received");
                             Instant now = Instant.now();
-                            util.print(String.format("receiving speed %.2f KB/s", 10.0 * 1000 / (Duration.between(last, now).toMillis() / 1000.0)));
+                            double secs=(Duration.between(last, now).toMillis() / 1000.0);
+                            util.print(String.format("%d MB data received.\nLast 10MB takes %.2f seconds.",receivedMBNum.addAndGet(10),secs));
+                            util.print(String.format("receiving speed %.2f KB/s\n", 10.0 * 1000 / secs));
                             last = now;
                         }
                     }
                 }
-
+                // status不为200时重复请求，多次失败则记录到errorUsers
                 if (status != 200) {
                     if (tryCount > maxEmptyTry) {
                         errorUsers.put(user, status + " " + body);
@@ -110,22 +117,24 @@ public class ResponseExtractor implements Runnable {
                 try {
                     if (type.equals("info")) {
                         dataQueue.put(new DataNode(user, type, id, 1, body));
-                        Map<String, Object> info = util.loadJsonString(body, Map.class);
+                        Map<String, Object> info =  util.loadJsonString(body, Map.class);
+                        //根据info数据构造其他数据请求
                         putJsonRequestUrls(user, info);
                         continue;
                     }
-                    ResponseContent content = util.loadJsonString(body, ResponseContent.class);  //TODO change to regex
+                    ResponseContent content = util.loadJsonString(body, ResponseContent.class);
                     List<Map<String, Object>> data = content.data;
 
+                    //请求到的数据为空时重复请求，多次失败则说明知乎数据有问题，忽略该错误并继续
                     if (data.size() == 0) {
                         if (tryCount < maxEmptyTry) {
                             requestQueue0.put(new RequestNode(user, type, url, id, oldTotalRequestNum, tryCount + 1));
-
-                        } else {
+                            continue;
+                        } /*else {
                             errorUsers.put(user, String.format("Empty data %s %d %d %s", type, id, oldTotalRequestNum, url));
                             util.logWarning("ERRORUSER 5 Empty data " + user);
-                        }
-                        continue;
+                        }*/
+
                     }
                     dataQueue.put(new DataNode(user, type, id, oldTotalRequestNum, util.toJsonString(data)));
                     content.data.clear();

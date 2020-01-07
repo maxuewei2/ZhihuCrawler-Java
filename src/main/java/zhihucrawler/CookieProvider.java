@@ -16,10 +16,6 @@ class Cookie{
         return cookieString;
     }
 
-    public String getCookieUser() {
-        return cookieUser;
-    }
-
     @Override
     public String toString() {
         return cookieUser;

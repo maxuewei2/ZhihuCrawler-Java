@@ -19,9 +19,8 @@ public class RequestJson implements Runnable {
                 BlockingQueue<RequestNode> requestQueue,
                 BlockingQueue<RequestNode> requestQueue0,
                 BlockingQueue<ResponseNode> responseQueue,
-                ConcurrentMap<String, String> errorUsers,
-                boolean verbose) {
-        this.request = new Request(cookieProvider, proxyProvider, tryMax, verbose);
+                ConcurrentMap<String, String> errorUsers) {
+        this.request = new Request(cookieProvider, proxyProvider, tryMax);
         this.requestQueue = requestQueue;
         this.requestQueue0 = requestQueue0;
         this.responseQueue = responseQueue;
@@ -38,6 +37,7 @@ public class RequestJson implements Runnable {
             while (true) {
                 boolean newRequestFlag=false;
                 if (requestNode == null) {
+                    //先在requestQueue0取，取不到再到requestQueue取
                     if ((requestNode = requestQueue0.poll(1000, TimeUnit.MILLISECONDS)) == null) {
                         requestNode = requestQueue.poll(1000, TimeUnit.MILLISECONDS);
                         if (requestNode == null) continue;
@@ -54,12 +54,13 @@ public class RequestJson implements Runnable {
 
                 try {
                     HttpResponse<String> response;
-                    if (newRequestFlag) {
+                    response = request.request(requestNode.url);
+                    /*if (newRequestFlag) {
                         response = request.request(requestNode.url);
                     } else {
                         response = request.request(requestNode.url, null);
                         httpErrorCount=0;
-                    }
+                    }*/
                     responseQueue.put(new ResponseNode(requestNode, response.statusCode(), response.body()));
                     requestNode=null;
                 } catch (IOException e) {
@@ -74,7 +75,7 @@ public class RequestJson implements Runnable {
                     }else {
                         util.logWarning("proxy HTTPNORESPONSE ", e);
                     }
-                    //requestQueue0.put(requestNode);
+                    request.changeProxy();
                 }
             }
         } catch (InterruptedException e) {

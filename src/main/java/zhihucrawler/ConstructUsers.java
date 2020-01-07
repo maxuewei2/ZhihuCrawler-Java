@@ -28,31 +28,35 @@ class ConstructUsers {
         this.errorUsers = errorUsers;
     }
 
-    private synchronized void checkMap(int flag) throws InterruptedException, JsonProcessingException {
+    private void checkMap(int flag) {
         int i=0;
-        long x=0;
+        //long x=0;
+        StringBuilder users=new StringBuilder();
         for (String s : userMap.keySet()) {
             User user = userMap.get(s);
             if(user.isRemoved){
                 continue;
             }
             i++;
-            if(flag==1)x+=user.getString1().length();
+            users.append("\n In Map").append(user.getString());
+            //if(flag==1)x+=user.getString().length();
             if (errorUsers.containsKey(s)) {
                 userMap.replace(s,removedUser);
             }
         }
-        util.logInfo("MapSize " + userMap.size()+" valid users "+i);
-        if(flag==1)util.logInfo(String.format("MapData %.3f MB ",x/1000000.0));
+        util.logInfo("MapSize " + userMap.size()+" valid users "+i+users);
+        //if(flag==1)util.logInfo(String.format("MapData %.3f MB ",x/1000000.0));
     }
 
     private void doTask() {
         Instant last=Instant.now();
         try {
             while (true) {
-                if(Duration.between(last,Instant.now()).toSeconds()>10) {
-                    checkMap(0);
-                    last=Instant.now();
+                synchronized (this) {
+                    if (Duration.between(last, Instant.now()).toSeconds() > 10) {
+                        checkMap(0);
+                        last = Instant.now();
+                    }
                 }
                 DataNode dataNode = dataQueue.poll(10000, TimeUnit.MILLISECONDS);
                 if (dataNode == null) {
@@ -80,8 +84,6 @@ class ConstructUsers {
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-        }catch (JsonProcessingException e){
-            assert true;
         }
     }
 
