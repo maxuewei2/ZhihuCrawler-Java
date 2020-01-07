@@ -118,10 +118,10 @@ public class ZhihuCrawler {
                                 "\n\terrorUsers " + errorUsers.size()
                         );
                     }
-                    /*if (i > (3600 * 6)) {
+                    if (i > (3600 * 6)) {
                         util.logInfo("exit after 6 hour.");
                         System.exit(0);
-                    }*/
+                    }
                     i++;
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();

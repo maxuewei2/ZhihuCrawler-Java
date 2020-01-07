@@ -65,11 +65,11 @@ public class RequestJson implements Runnable {
                 } catch (IOException e) {
                     if (e.getMessage().equals("Network Error")) {
                         Thread.sleep(500);
-                        if(httpErrorCount++>10) {
+                        /*if(httpErrorCount++>10) {
                             util.logSevere("nonproxy HTTPNORESPONSE 10 times\nThread terminate.",e);
                             errorUsers.put(requestNode.user, "Network Error");
                             Thread.currentThread().interrupt();
-                        }
+                        }*/
                         util.logWarning("nonproxy HTTPNORESPONSE ",e);
                     }else {
                         util.logWarning("proxy HTTPNORESPONSE ", e);
