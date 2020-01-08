@@ -115,7 +115,7 @@ class ProxyProvider {
     @SuppressWarnings("unchecked")
     private void crawlProxies(){
         Request request=new Request(null,null,3);
-        request.setProxy(new Proxy("127.0.0.1:12333"));
+        //request.setProxy(new Proxy("127.0.0.1:12333"));
         try {
             /*String content=util.loadFile("proxies.txt");
             ArrayList<String> tmp=util.loadJsonString(content,ArrayList.class);

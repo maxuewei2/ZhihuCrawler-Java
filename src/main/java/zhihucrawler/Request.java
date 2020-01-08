@@ -67,7 +67,7 @@ class Request {
             if (cookie != null) {
                 builder.setHeader("Cookie", cookie.getCookieString());
             }
-            util.logInfo(Thread.currentThread().getName()+" using "+cookie+" "+proxy+" getting " + url);
+            util.logInfo(Thread.currentThread().getName()+" using "+cookie+" "+proxy+" GET " + url);
         }
         HttpRequest request =builder.build();
         return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
