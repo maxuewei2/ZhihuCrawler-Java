@@ -42,20 +42,22 @@ public class ZhihuCrawler {
         Map<String, Collection<?>> state = util.loadJsonString(content, new TypeReference<>() {
         });
 
-        /*因visited包含writed和在request队列中的用户，所以上次终止程序时队列中的用户都没写入文件，需要重新请求*/
-        visited = new LinkedHashSet<>((List<String>) state.get("visited"));
-        writed = new LinkedList<>((List<String>) state.get("writed"));
-        visited.removeAll(writed);
-        toVisit = new LinkedHashSet<>(visited);
-        toVisit.addAll((List<String>) state.get("toVisit"));
-        visited.clear();
-        visited.addAll(writed);
-
         List<Map<String, String>> tmp = (List<Map<String, String>>) state.get("errorUsers");
         errorUsers = new ConcurrentHashMap<>(tmp.size() * 3);
         for (Map<String, String> e : tmp) {
             errorUsers.putAll(e);
         }
+
+        /*因visited包含writed和在request队列中的用户还有errorUsers，所以上次终止程序时队列中的用户都没写入文件，需要重新请求*/
+        visited = new LinkedHashSet<>((List<String>) state.get("visited"));
+        writed = new LinkedList<>((List<String>) state.get("writed"));
+        visited.removeAll(writed);
+        visited.removeAll(errorUsers.keySet());
+        toVisit = new LinkedHashSet<>(visited);
+        visited = new LinkedHashSet<>((List<String>) state.get("visited"));
+        visited.removeAll(toVisit);
+        toVisit.addAll((List<String>) state.get("toVisit"));
+
         util.logInfo("load state" +
                 "\n\ttoVisit " + toVisit.size() +
                 "\n\tvisited " + visited.size() +
@@ -265,7 +267,11 @@ public class ZhihuCrawler {
 
     public static void main(String[] args) {
         try {
-            ZhihuCrawler crawler = new ZhihuCrawler("config.json", "/dev/shm/zh-crawler.log");
+            util.print("config file: "+ args[0]);
+            util.print("log file: "+ args[1]);
+            String configFileName=args[0];
+            String logFileName=args[1];
+            ZhihuCrawler crawler = new ZhihuCrawler(configFileName, logFileName);
             crawler.startCrawler();
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 cleanBeforeShutdown(crawler);
