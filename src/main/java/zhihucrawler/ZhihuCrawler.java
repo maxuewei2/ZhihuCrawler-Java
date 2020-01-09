@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -193,37 +194,38 @@ public class ZhihuCrawler {
         }).start();
 
         /*将toVisit中的用户加入Requests的队列*/
-        try {
+        new Thread(()-> {
+            try {
             /*for (String user : errorUsers.keySet()) {
                 crawlUsers.getToCrawlUsersQueue().put(user);
                 errorUsers.remove(user);
             }
             util.logInfo("put errorUsers in toCrawlQueue");*/
 
-            //noinspection InfiniteLoopStatement
-            while (true) {
-                LinkedList<String> tmp = new LinkedList<>();
-                synchronized (this) {
-                    for (String user : toVisit) {
-                        //所有用户都是先请求info数据，然后根据info构造其他数据请求
-                        if (requests.getRequestQueue().offer(new RequestNode(user, "info"))) {
-                            visited.add(user);
-                            tmp.add(user);
-                        } else {
-                            break;
+                while (true) {
+                    LinkedList<String> tmp = new LinkedList<>();
+                    synchronized (this) {
+                        for (String user : toVisit) {
+                            //所有用户都是先请求info数据，然后根据info构造其他数据请求
+                            if (requests.getRequestQueue().offer(new RequestNode(user, "info"))) {
+                                visited.add(user);
+                                tmp.add(user);
+                            } else {
+                                break;
+                            }
                         }
+                        toVisit.removeAll(tmp);
                     }
-                    toVisit.removeAll(tmp);
+                    synchronized (requests.getRequestQueue()) {
+                        requests.getRequestQueue().wait();
+                    }
+                    tmp.clear();
                 }
-                synchronized (requests.getRequestQueue()) {
-                    requests.getRequestQueue().wait();
-                }
-                tmp.clear();
+            } catch (InterruptedException e) {
+                util.print("crawler interrupted");
+                Thread.currentThread().interrupt();
             }
-        } catch (InterruptedException e) {
-            util.print("crawler interrupted");
-            Thread.currentThread().interrupt();
-        }
+        }).start();
     }
 
     Logger initLogger(String logFileName) throws IOException {
@@ -252,10 +254,20 @@ public class ZhihuCrawler {
         return logger;
     }
 
+    private static void shutdown(ZhihuCrawler crawler){
+        crawler.saveState();
+    }
+
     public static void main(String[] args) {
         try {
-            ZhihuCrawler crawler = new ZhihuCrawler("config.json", "zh-crawler.log");
+            ZhihuCrawler crawler = new ZhihuCrawler("config.json", "/dev/shm/zh-crawler.log");
             crawler.startCrawler();
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                shutdown(crawler);
+                String msg=String.format("System shutdown at %s.", LocalDateTime.now());
+                util.print(msg);
+                util.logWarning(msg);
+            }));
         } catch (IOException e) {
             util.logSevere("IOException", e);
             System.exit(-1);

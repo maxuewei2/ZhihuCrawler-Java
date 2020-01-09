@@ -30,12 +30,14 @@ public class ResponseExtractor implements Runnable {
     private static final AtomicInteger receivedBytesNum = new AtomicInteger(0);
     private static final AtomicInteger receivedMBNum = new AtomicInteger(0);
     private static Instant last = Instant.now();
+    private final static int tenMB=10*1024*1024;
+    private final static int maxEmptyTry = 3;
 
     private final BlockingQueue<RequestNode> requestQueue0;
     private final BlockingQueue<ResponseNode> responseQueue;
     private final BlockingQueue<DataNode> dataQueue;
     private final ConcurrentMap<String, String> errorUsers;
-    private final int maxEmptyTry = 3;
+
 
     ResponseExtractor(BlockingQueue<RequestNode> requestQueue0,
                       BlockingQueue<ResponseNode> responseQueue,
@@ -89,17 +91,17 @@ public class ResponseExtractor implements Runnable {
 
                 /*累计收到的数据大小，每获取10MB，计算请求速度，并打印*/
 
-                if (receivedBytesNum.addAndGet(body.length()) > 10000000) {
+                if (receivedBytesNum.addAndGet(body.length()) > tenMB) {
                     synchronized (receivedBytesNum) {
-                        if (receivedBytesNum.get() > 10000000) {
+                        if (receivedBytesNum.get() > tenMB) {
                             while (true) {
                                 int tmp = receivedBytesNum.get();
-                                if (receivedBytesNum.compareAndSet(tmp, tmp % 10000000)) break;
+                                if (receivedBytesNum.compareAndSet(tmp, tmp % tenMB)) break;
                             }
                             Instant now = Instant.now();
                             double secs=(Duration.between(last, now).toMillis() / 1000.0);
-                            util.print(String.format("%d MB data received.\nLast 10MB takes %.2f seconds.",receivedMBNum.addAndGet(10),secs));
-                            util.print(String.format("receiving speed %.2f KB/s\n", 10.0 * 1000 / secs));
+                            util.print(String.format("%d MB data received.\nThe last 10MB take %.2f seconds.",receivedMBNum.addAndGet(10),secs));
+                            util.print(String.format("Receiving speed: %.2f KB/s\n", 10240.0 / secs));
                             last = now;
                         }
                     }
