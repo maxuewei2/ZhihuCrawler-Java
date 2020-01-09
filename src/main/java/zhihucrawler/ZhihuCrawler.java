@@ -112,6 +112,11 @@ public class ZhihuCrawler {
             while (true) {
                 try {
                     Thread.sleep(1000);
+                    if(requests.aliveRequestNum==0){
+                        util.logSevere("no alive request threads left.");
+                        cleanBeforeShutdown(this);
+                        System.exit(0);
+                    }
                     if (i % 30 == 0) {
                         System.gc();
                     }
@@ -254,7 +259,7 @@ public class ZhihuCrawler {
         return logger;
     }
 
-    private static void shutdown(ZhihuCrawler crawler){
+    private static void cleanBeforeShutdown(ZhihuCrawler crawler){
         crawler.saveState();
     }
 
@@ -263,7 +268,7 @@ public class ZhihuCrawler {
             ZhihuCrawler crawler = new ZhihuCrawler("config.json", "/dev/shm/zh-crawler.log");
             crawler.startCrawler();
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                shutdown(crawler);
+                cleanBeforeShutdown(crawler);
                 String msg=String.format("System shutdown at %s.", LocalDateTime.now());
                 util.print(msg);
                 util.logWarning(msg);

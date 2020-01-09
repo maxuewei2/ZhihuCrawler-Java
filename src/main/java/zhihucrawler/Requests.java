@@ -65,6 +65,7 @@ class Requests{
     private final BlockingQueue<ResponseNode> responseQueue;
     private final BlockingQueue<DataNode> dataQueue;
     private final ConcurrentMap<String,String> errorUsers;
+    volatile int aliveRequestNum=0;
 
     Requests(String cookieFileName, int workers, int tryMax, ConcurrentMap<String,String> errorUsers)throws IOException {
         cookieProvider=new CookieProvider(cookieFileName);
@@ -106,28 +107,29 @@ class Requests{
             extractorThreads[i]=new Thread(new ResponseExtractor(requestQueue0,responseQueue,dataQueue,errorUsers));
             extractorThreads[i].start();
         }
-        /*//监测线程，定时打印活着的请求线程数
+        //监测线程，定时打印活着的请求线程数
         new Thread(()->{
             try {
                 while (true) {
-                    int requestThreadsAliveNum=workers;
+                    int aliveRequestNum=workers;
                     for(int i=0;i<workers;i++){
                         if(!requestThreads[i].isAlive()){
-                            requestThreadsAliveNum--;
+                            aliveRequestNum--;
                         }
                     }
-                    int extractorThreadsAliveNum=workers;
+                    int aliveExtractorNum=workers;
                     for(int i=0;i<workers;i++){
                         if(!extractorThreads[i].isAlive()){
-                            extractorThreadsAliveNum--;
+                            aliveExtractorNum--;
                         }
                     }
-                    util.logInfo("requestThreadsAliveNum "+requestThreadsAliveNum+" extractorThreadsAliveNum "+extractorThreadsAliveNum);
+                    this.aliveRequestNum=aliveRequestNum;
+                    util.logInfo("aliveRequestNum "+aliveRequestNum+" aliveExtractorNum "+aliveExtractorNum);
                     Thread.sleep(10000);
                 }
             }catch (InterruptedException e){
                 Thread.currentThread().interrupt();
             }
-        }).start();*/
+        }).start();
     }
 }

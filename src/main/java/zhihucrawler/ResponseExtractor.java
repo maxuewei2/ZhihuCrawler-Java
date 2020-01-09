@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -79,7 +81,6 @@ public class ResponseExtractor implements Runnable {
             //noinspection InfiniteLoopStatement
             while (true) {
                 ResponseNode responseNode = responseQueue.take();
-                int status = responseNode.status;
                 String body = responseNode.body;
                 RequestNode requestNode = responseNode.requestNode;
                 String user = requestNode.user;
@@ -100,21 +101,12 @@ public class ResponseExtractor implements Runnable {
                             }
                             Instant now = Instant.now();
                             double secs=(Duration.between(last, now).toMillis() / 1000.0);
+                            util.print(""+LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
                             util.print(String.format("%d MB data received.\nThe last 10MB take %.2f seconds.",receivedMBNum.addAndGet(10),secs));
                             util.print(String.format("Receiving speed: %.2f KB/s\n", 10240.0 / secs));
                             last = now;
                         }
                     }
-                }
-                // status不为200时重复请求，多次失败则记录到errorUsers
-                if (status != 200) {
-                    if (tryCount > maxEmptyTry) {
-                        errorUsers.put(user, status + " " + body);
-                        util.logWarning("ERRORUSER 3 " + user + " " + status + " " + body);
-                    } else {
-                        requestQueue0.put(new RequestNode(user, type, url, id, oldTotalRequestNum, tryCount + 1));
-                    }
-                    continue;
                 }
                 try {
                     if (type.equals("info")) {
