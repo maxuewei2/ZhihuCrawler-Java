@@ -32,6 +32,7 @@ class CookieProvider {
         for (Map.Entry<String,String> e:tmp.entrySet()) {
             cookies.add(new Cookie(e.getKey(),e.getValue()));
         }
+        util.logInfo("load "+cookies.size()+" cookies.");
     }
 
 
