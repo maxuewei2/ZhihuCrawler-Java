@@ -33,13 +33,18 @@ class CookieProvider {
 
     @SuppressWarnings("unchecked")
     CookieProvider(String cookieFileName)throws IOException {
-        String [] uas=util.loadFile("ua.txt").split("\n");
         cookies=new ArrayList<>();
-        Map<String,String> tmp=util.loadJsonString(util.loadFile(cookieFileName),Map.class);
+        String [] uas=util.loadFile("ua.txt").split("\n");  //TODO check content format, eg. blank lines
+        String [] cks=util.loadFile("cookies.txt").split("\n");  //TODO check content format, eg. blank lines
+        assert cks.length%2==0;
+        for(int i=0;i<cks.length/2;i++){
+            cookies.add(new Cookie(cks[2*i],cks[2*i+1],uas[i]));
+        }
+        /*Map<String,String> tmp=util.loadJsonString(util.loadFile(cookieFileName),Map.class);
         int i=0;
         for (Map.Entry<String,String> e:tmp.entrySet()) {
             cookies.add(new Cookie(e.getKey(),e.getValue(),uas[i++]));
-        }
+        }*/
         util.logInfo("load "+cookies.size()+" cookies.");
     }
 
