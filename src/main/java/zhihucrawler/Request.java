@@ -13,15 +13,15 @@ import java.time.Instant;
 class Request {
     private final CookieProvider cookieProvider;
     private final ProxyProvider proxyProvider;
-    private final int tryMax;
+    private final int maxTryNum;
     private HttpClient httpClient;
     private Proxy proxy;
     private Instant last=Instant.now();
 
-    Request(CookieProvider cookieProvider,ProxyProvider proxyProvider,int tryMax){
+    Request(CookieProvider cookieProvider,ProxyProvider proxyProvider,int maxTryNum){
         this.cookieProvider=cookieProvider;
         this.proxyProvider=proxyProvider;
-        this.tryMax = tryMax;
+        this.maxTryNum = maxTryNum;
         if(proxyProvider!=null){
             setProxy(proxyProvider.getProxy());
         }else{
@@ -76,7 +76,7 @@ class Request {
 
     private HttpResponse<String> sendRequest(String url) throws InterruptedException,IOException {
         Throwable throwable=null;
-        for (int i = 0; i < tryMax; i++) {
+        for (int i = 0; i < maxTryNum; i++) {
             try {
                 return sendGet(url);
             } catch (IOException e) {

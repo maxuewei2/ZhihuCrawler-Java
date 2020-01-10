@@ -24,6 +24,7 @@ public class ZhihuCrawler {
 
     private ZhihuCrawler(String configFileName, String logFileName) throws IOException {
         String content=loadConfig(configFileName);
+        checkConfig();
         util.setLogger(initLogger(logFileName));
         util.logInfo("config: " + content);
     }
@@ -33,6 +34,18 @@ public class ZhihuCrawler {
         String content = util.loadFile(configFileName);
         this.config = util.loadJsonString(content, Config.class);
         return content;
+    }
+
+    void checkConfig()throws IOException{
+        if(config.parallelRequests==0){
+            throw new IOException("Config error. parallelRequests is 0");
+        }
+        if(config.maxTryNum==0){
+            throw new IOException("Config error. maxTryNum is 0");
+        }
+        if(config.sleepMills==0){
+            throw new IOException("Config error. sleepMills is 0");
+        }
     }
 
     /*读取之前的进度并恢复进度*/
@@ -96,7 +109,7 @@ public class ZhihuCrawler {
         /*
         * main -> Requests.requestQueue -> Requests.dataQueue -> writeQueue -> files
         * */
-        Requests requests = new Requests(config.cookieFileName, config.parallelRequests, config.tryMax, errorUsers);
+        Requests requests = new Requests(config.cookieFileName, config.parallelRequests, config.maxTryNum, config.sleepMills, errorUsers);
 
         LinkedBlockingQueue<User> writeQueue = new LinkedBlockingQueue<>(config.parallelRequests);
 

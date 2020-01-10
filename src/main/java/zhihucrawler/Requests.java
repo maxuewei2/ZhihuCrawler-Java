@@ -59,7 +59,8 @@ class Requests{
     private final CookieProvider cookieProvider;
     private final ProxyProvider proxyProvider;
     private final int workers;
-    private final int tryMax;
+    private final int maxTryNum;
+    private final int sleepMills;
     private final BlockingQueue<RequestNode> requestQueue;
     private final BlockingQueue<RequestNode> requestQueue0;
     private final BlockingQueue<ResponseNode> responseQueue;
@@ -67,12 +68,13 @@ class Requests{
     private final ConcurrentMap<String,String> errorUsers;
     volatile int aliveRequestNum=0;
 
-    Requests(String cookieFileName, int workers, int tryMax, ConcurrentMap<String,String> errorUsers)throws IOException {
+    Requests(String cookieFileName, int workers, int maxTryNum, int sleepMills, ConcurrentMap<String,String> errorUsers)throws IOException {
         cookieProvider=new CookieProvider(cookieFileName);
         proxyProvider=new ProxyProvider(Math.min(500,workers*2));
         //proxyProvider=null;
         this.workers=workers;
-        this.tryMax=tryMax;
+        this.maxTryNum=maxTryNum;
+        this.sleepMills=sleepMills;
         this.errorUsers=errorUsers;
         requestQueue=new LinkedBlockingQueue<>(workers*2);
         requestQueue0=new LinkedBlockingQueue<>();
@@ -100,7 +102,7 @@ class Requests{
         Thread [] requestThreads=new Thread[workers];
         Thread [] extractorThreads=new Thread[workers];
         for (int i = 0; i < workers; i++) {
-            requestThreads[i]=new Thread(new RequestJson(cookieProvider,proxyProvider,tryMax,requestQueue,requestQueue0,responseQueue,errorUsers));
+            requestThreads[i]=new Thread(new RequestJson(cookieProvider,proxyProvider,maxTryNum,sleepMills,requestQueue,requestQueue0,responseQueue,errorUsers));
             requestThreads[i].start();
         }
         for (int i = 0; i < workers; i++) {

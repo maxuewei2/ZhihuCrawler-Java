@@ -13,19 +13,22 @@ public class RequestJson implements Runnable {
     private final BlockingQueue<ResponseNode> responseQueue;
     private final ConcurrentMap<String, String> errorUsers;
     private final Request request;
+    private final int sleepMills;
 
     RequestJson(CookieProvider cookieProvider,
                 ProxyProvider proxyProvider,
-                int tryMax,
+                int maxTryNum,
+                int sleepMills,
                 BlockingQueue<RequestNode> requestQueue,
                 BlockingQueue<RequestNode> requestQueue0,
                 BlockingQueue<ResponseNode> responseQueue,
                 ConcurrentMap<String, String> errorUsers) {
-        this.request = new Request(cookieProvider, proxyProvider, tryMax);
+        this.request = new Request(cookieProvider, proxyProvider, maxTryNum);
         this.requestQueue = requestQueue;
         this.requestQueue0 = requestQueue0;
         this.responseQueue = responseQueue;
         this.errorUsers = errorUsers;
+        this.sleepMills=sleepMills;
     }
 
     int checkStatus(HttpResponse<String> response, RequestNode requestNode)throws InterruptedException{
@@ -59,7 +62,7 @@ public class RequestJson implements Runnable {
         try {
             //noinspection InfiniteLoopStatement
             while (true) {
-                Thread.sleep(System.currentTimeMillis()%1000);
+                Thread.sleep(System.currentTimeMillis()%sleepMills);
                 boolean newRequestFlag=false;
                 if (requestNode == null) {
                     //先在requestQueue0取，取不到再到requestQueue取
