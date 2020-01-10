@@ -5,5 +5,5 @@
 "parallelRequests":10,
 "dataDirName":"data",
 "verbose":true,
-"sleepMills": 1000
+"sleepMills": 5000
 }
