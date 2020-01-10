@@ -113,6 +113,7 @@ public class RequestJson implements Runnable {
                 }
             }
         } catch (InterruptedException e) {
+            util.logWarning("RequestJson Interrupted",e);
             Thread.currentThread().interrupt();
         }
     }

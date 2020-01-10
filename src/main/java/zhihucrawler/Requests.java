@@ -130,6 +130,7 @@ class Requests{
                     Thread.sleep(10000);
                 }
             }catch (InterruptedException e){
+                util.logWarning("Requests monitor thread Interrupted",e);
                 Thread.currentThread().interrupt();
             }
         }).start();

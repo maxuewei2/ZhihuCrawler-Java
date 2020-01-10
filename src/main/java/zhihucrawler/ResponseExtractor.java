@@ -142,6 +142,7 @@ public class ResponseExtractor implements Runnable {
                 }
             }
         } catch (InterruptedException e) {
+            util.logWarning("ResponseExtractor Interrupted",e);
             Thread.currentThread().interrupt();
         }
     }

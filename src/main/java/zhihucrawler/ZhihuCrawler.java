@@ -153,6 +153,7 @@ public class ZhihuCrawler {
                     }*/
                     i++;
                 } catch (InterruptedException e) {
+                    util.logWarning("Main monitor thread Interrupted",e);
                     Thread.currentThread().interrupt();
                 }
 
@@ -208,7 +209,7 @@ public class ZhihuCrawler {
                     }
                 }
             } catch (InterruptedException e) {
-                util.logInfo("write interrupted");
+                util.logWarning("Main write thread interrupted",e);
                 Thread.currentThread().interrupt();
             }
         }).start();
@@ -242,7 +243,7 @@ public class ZhihuCrawler {
                     tmp.clear();
                 }
             } catch (InterruptedException e) {
-                util.print("crawler interrupted");
+                util.logWarning("Main offer thread interrupted",e);
                 Thread.currentThread().interrupt();
             }
         }).start();

@@ -147,6 +147,7 @@ class ProxyProvider {
                 }
             }
         } catch (InterruptedException e) {
+            util.logWarning("ProxyProvider crawlProxies Interrupted",e);
             Thread.currentThread().interrupt();
         }catch (IOException e){
             util.logSevere("ProxyProvider Network Error",e);

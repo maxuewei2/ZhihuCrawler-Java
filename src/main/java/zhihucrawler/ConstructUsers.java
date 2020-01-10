@@ -83,6 +83,7 @@ class ConstructUsers {
                 }
             }
         } catch (InterruptedException e) {
+            util.logWarning("ConstructUsers Interrupted",e);
             Thread.currentThread().interrupt();
         }
     }
