@@ -59,6 +59,7 @@ public class RequestJson implements Runnable {
         try {
             //noinspection InfiniteLoopStatement
             while (true) {
+                Thread.sleep(System.currentTimeMillis()%1000);
                 boolean newRequestFlag=false;
                 if (requestNode == null) {
                     //先在requestQueue0取，取不到再到requestQueue取

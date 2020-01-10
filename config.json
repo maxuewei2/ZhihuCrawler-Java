@@ -2,7 +2,7 @@
 "cookieFileName":"cookies.json",
 "stateFileName":"state.json",
 "tryMax":3,
-"parallelRequests":100,
+"parallelRequests":10,
 "dataDirName":"data",
 "verbose":true
 }

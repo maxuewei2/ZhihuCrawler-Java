@@ -55,20 +55,21 @@ class Request {
     }
 
     private HttpResponse<String> sendGet(String url) throws IOException, InterruptedException {
-        final String userAgent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.79 Safari/537.36";
+        String userAgent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.79 Safari/537.36";
 
         HttpRequest.Builder builder=HttpRequest.newBuilder()
                 .GET()
                 .timeout(Duration.ofSeconds(5))
-                .uri(URI.create(url))
-                .setHeader("User-Agent", userAgent);
+                .uri(URI.create(url));
         if(cookieProvider!=null) {
             Cookie cookie = cookieProvider.getCookie();
             if (cookie != null) {
                 builder.setHeader("Cookie", cookie.getCookieString());
+                userAgent=cookie.getUserAgent();
             }
             util.logInfo(Thread.currentThread().getName()+" using "+cookie+" "+proxy+" GET " + url);
         }
+        builder.setHeader("User-Agent", userAgent);
         HttpRequest request =builder.build();
         return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
     }
