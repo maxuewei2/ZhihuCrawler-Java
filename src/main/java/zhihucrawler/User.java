@@ -74,7 +74,7 @@ class User {
                 /*if(folowersCompleteInfo==null){
                     folowersCompleteInfo=new StringBuilder(totals*20*200);
                 }
-                String del = folowersCompleteInfo.length()==0 ? "" : ",";
+                String del = folowersCompleteInfo.length()==0|content.equals("[]")|content.equals("[ ]") ? "" : ",";
                 folowersCompleteInfo.append(del).append(content, 1, content.length() - 1);*/
                 if (followersICount != -1 && ++followersICount >= totals) {
                     followersICount = -1;
@@ -84,7 +84,7 @@ class User {
                 /*if(foloweesCompleteInfo==null){
                     foloweesCompleteInfo=new StringBuilder(totals*20*200);
                 }
-                String del = foloweesCompleteInfo.length()==0 ? "" : ",";
+                String del = foloweesCompleteInfo.length()==0|content.equals("[]")|content.equals("[ ]") ? "" : ",";
                 foloweesCompleteInfo.append(del).append(content, 1, content.length() - 1);*/
                 if (followeesICount != -1 && ++followeesICount >= totals) {
                     followeesICount = -1;
@@ -100,7 +100,7 @@ class User {
             if (topics == null) {
                 topics = new StringBuilder(totals * 20 * 200);
             }
-            String del = topics.length() == 0 ? "" : ",";
+            String del = topics.length() == 0|content.equals("[]")|content.equals("[ ]") ? "" : ",";
             topics.append(del).append(content, 1, content.length() - 1);
             if (topicsICount != -1 && ++topicsICount >= totals) {
                 topicsICount = -1;
@@ -113,7 +113,7 @@ class User {
             if (questions == null) {
                 questions = new StringBuilder(totals * 20 * 200);
             }
-            String del = questions.length() == 0 ? "" : ",";
+            String del = questions.length() == 0|content.equals("[]")|content.equals("[ ]") ? "" : ",";
             questions.append(del).append(content, 1, content.length() - 1);
             if (questionsICount != -1 && ++questionsICount >= totals) {
                 questionsICount = -1;

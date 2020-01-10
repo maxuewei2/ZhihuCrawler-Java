@@ -9,7 +9,7 @@ cookie*
 *.zip
 *.log
 ff
-print
+print*
 *.lck
 pom1.xml
 *.iml
