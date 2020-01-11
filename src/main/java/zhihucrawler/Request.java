@@ -62,7 +62,6 @@ class Request {
                 .timeout(Duration.ofSeconds(5))
                 .uri(URI.create(url))
                 .setHeader("accept", "*/*")
-                .setHeader("accept-encoding", "gzip, deflate, br")
                 .setHeader("accept-language", "zh-CN,zh;q=0.9")
                 .setHeader("cache-control", "no-cache")
                 .setHeader("dnt", "1")

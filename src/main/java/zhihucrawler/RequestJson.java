@@ -90,7 +90,10 @@ public class RequestJson implements Runnable {
                         httpErrorCount=0;
                     }*/
                     int flag=checkStatus(response,requestNode);
-                    if(flag==0||flag==-1)continue;;
+                    if(flag==0||flag==-1){
+                        requestNode=null;
+                        continue;
+                    }
                     if(flag==403){
                         util.logSevere("Response status code 403. Need login.");
                         return;
