@@ -80,7 +80,7 @@ class Requests{
         this.errorUsers=errorUsers;
         requestQueue=new LinkedBlockingQueue<>(workers*2);
         //requestQueue0=new LinkedBlockingQueue<>();
-        requestQueue0=new PriorityBlockingQueue<>(200, Comparator.comparingInt(o -> (o.user+o.type).hashCode()+o.id));
+        requestQueue0=new PriorityBlockingQueue<>(200, Comparator.comparing(o -> (o.user+"/"+o.type+"/"+o.id)));
         responseQueue=new LinkedBlockingQueue<>(workers*2);
         dataQueue=new LinkedBlockingQueue<>(workers*2);
     }

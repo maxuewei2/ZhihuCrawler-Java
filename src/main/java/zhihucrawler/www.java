@@ -31,8 +31,11 @@ public class www{
         }
     }
     public static void main(String [] args) throws JsonProcessingException,InterruptedException, IOException {
+        util.print("follower".hashCode()+"");
+        util.print("followee".hashCode()+"");
+        util.print("topic".hashCode()+"");
+        util.print("question".hashCode()%100+"");
         fun(0);
-
         //ProxyProvider proxyProvider=new ProxyProvider(200);
 
         Thread.sleep(3000000);
