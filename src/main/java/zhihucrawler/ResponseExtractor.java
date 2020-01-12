@@ -39,7 +39,8 @@ public class ResponseExtractor implements Runnable {
     private final BlockingQueue<ResponseNode> responseQueue;
     private final BlockingQueue<DataNode> dataQueue;
     private final ConcurrentMap<String, String> errorUsers;
-
+    private final static String[] types = {"follower", "followee", "topic", "question"};
+    private final static String[] infoKey = {"follower_count", "following_count", "following_topic_count", "following_question_count"};
 
     ResponseExtractor(BlockingQueue<RequestNode> requestQueue0,
                       BlockingQueue<ResponseNode> responseQueue,
@@ -56,8 +57,6 @@ public class ResponseExtractor implements Runnable {
         if (user == null) {
             return;
         }
-        String[] types = {"follower", "followee", "topic", "question"};
-        String[] infoKey = {"follower_count", "following_count", "following_topic_count", "following_question_count"};
         for (int i = 0; i < types.length; i++) {
             String type = types[i];
             int totals = (int) info.get(infoKey[i]);

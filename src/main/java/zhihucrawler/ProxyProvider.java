@@ -55,7 +55,7 @@ class ProxyProvider {
     private ArrayList<String> crawlPage(Request request, int pageNum) throws IOException, InterruptedException {
         final Pattern pattern=Pattern.compile("alt=\"Cn\" /></td>\\s+<td>([^<]+)</td>\\s+<td>([^<]+)</td>");
         String url="https://www.xicidaili.com/wn/"+pageNum;
-        HttpResponse<String> response=request.request(url);
+        HttpResponse<String> response=request.request(url,"");
 
         ArrayList<String> proxyList=new ArrayList<>();
         if(response.statusCode()==200){
@@ -76,7 +76,7 @@ class ProxyProvider {
         Request testRequest=new Request(null,null,1);
         testRequest.setProxy(new Proxy(proxyString));
         try {
-            testRequest.request("https://www.zhihu.com");
+            testRequest.request("https://www.zhihu.com","");
         } catch (InterruptedException e) {
             assert true;
         } catch (IOException e) {

@@ -103,9 +103,11 @@ class Requests{
 
     void startThreads() {
         Thread [] requestThreads=new Thread[workers];
+        RequestJson []requestJsons=new RequestJson[workers];
         Thread [] extractorThreads=new Thread[workers];
         for (int i = 0; i < workers; i++) {
-            requestThreads[i]=new Thread(new RequestJson(cookieProvider,proxyProvider,maxTryNum,sleepMills,requestQueue,requestQueue0,responseQueue,errorUsers));
+            requestJsons[i]=new RequestJson(cookieProvider,proxyProvider,maxTryNum,sleepMills,requestQueue,requestQueue0,responseQueue,errorUsers);
+            requestThreads[i]=new Thread(requestJsons[i]);
             requestThreads[i].start();
         }
         for (int i = 0; i < workers; i++) {
@@ -118,7 +120,7 @@ class Requests{
                 while (true) {
                     int aliveRequestNum=workers;
                     for(int i=0;i<workers;i++){
-                        if(!requestThreads[i].isAlive()){
+                        if(requestJsons[i].status==-1){
                             aliveRequestNum--;
                         }
                     }
@@ -129,7 +131,7 @@ class Requests{
                         }
                     }
                     this.aliveRequestNum=aliveRequestNum;
-                    util.logInfo("aliveRequestNum "+aliveRequestNum+" aliveExtractorNum "+aliveExtractorNum);
+                    util.logInfo("non403RequestNum "+aliveRequestNum+" aliveExtractorNum "+aliveExtractorNum);
                     Thread.sleep(10000);
                 }
             }catch (InterruptedException e){

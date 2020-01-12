@@ -7,6 +7,7 @@ import java.net.http.HttpResponse;
 import java.util.concurrent.TimeUnit;
 
 public class RequestJson implements Runnable {
+    volatile int status;
     private static final int maxStatusTry=3;
     private final BlockingQueue<RequestNode> requestQueue;
     private final BlockingQueue<RequestNode> requestQueue0;
@@ -14,6 +15,7 @@ public class RequestJson implements Runnable {
     private final ConcurrentMap<String, String> errorUsers;
     private final Request request;
     private final int sleepMills;
+    private final static String[] refererKey = {"/followers", "/following", "/following/topics", "/following/questions"};
 
     RequestJson(CookieProvider cookieProvider,
                 ProxyProvider proxyProvider,
@@ -55,6 +57,24 @@ public class RequestJson implements Runnable {
         return status;
     }
 
+    String getReferer(String user,String type){
+        String prefix = "https://www.zhihu.com/people/" + user;
+        switch (type) {
+            case "follower":
+                return prefix + refererKey[0];
+            case "followee":
+                return prefix + refererKey[1];
+            case "topic":
+                return prefix + refererKey[2];
+            case "question":
+                return prefix + refererKey[3];
+            default:
+                return "";
+        }
+    }
+
+
+
     @Override
     public void run() {
         RequestNode requestNode = null;
@@ -82,7 +102,8 @@ public class RequestJson implements Runnable {
 
                 try {
                     HttpResponse<String> response;
-                    response = request.request(requestNode.url);
+                    String referer=getReferer(requestNode.user,requestNode.type);
+                    response = request.request(requestNode.url,referer);
                     /*if (newRequestFlag) {
                         response = request.request(requestNode.url);
                     } else {
@@ -95,9 +116,27 @@ public class RequestJson implements Runnable {
                         continue;
                     }
                     if(flag==403){
-                        util.logSevere("Response status code 403. Need login.");
-                        return;
+                        status=-1;
+                        /*util.print(response.body());
+                        response = request.request("https://www.zhihu.com/api/v4/anticrawl/captcha_appeal",referer);
+                        util.print(response.body());
+                        System.exit(0);*/
+                        if(request.getProxy()==null){
+                            util.logWarning("403 null");
+                            while(!request.changeProxy()){
+                                Thread.sleep(500);
+                            }
+                        }
+                        //util.logSevere("Response status code 403. Need login.");
+                        //return;
+                        else{
+                            util.logWarning("403 "+request.getProxy());
+                            request.getProxy().setError();
+                            request.changeProxy();
+                        }
+                        continue;
                     }
+                    status=0;
                     responseQueue.put(new ResponseNode(requestNode, response.statusCode(), response.body()));
                     requestNode=null;
                 } catch (IOException e) {
