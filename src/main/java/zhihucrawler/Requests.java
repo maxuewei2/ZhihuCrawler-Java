@@ -80,7 +80,14 @@ class Requests{
         this.errorUsers=errorUsers;
         requestQueue=new LinkedBlockingQueue<>(workers*2);
         //requestQueue0=new LinkedBlockingQueue<>();
-        requestQueue0=new PriorityBlockingQueue<>(200, Comparator.comparing(o -> (o.user+"/"+o.type+"/"+o.id)));
+        /*requestQueue0=new PriorityBlockingQueue<>(200, Comparator.comparingInt(o -> {
+            String user=o.user;
+            int x=user.charAt(0)*29791+user.charAt(1)*961+user.charAt(2)*31+o.type.charAt(o.type.length()-1);
+            return (x<<18)|o.id;
+        }));//String.format("%s/%s/%06d",o.user,o.type,o.id)*/
+        requestQueue0=new PriorityBlockingQueue<>(200, Comparator.comparing(
+                o->(String.format("%s%c%06d",o.user.substring(0,4),o.type.charAt(o.type.length()-1),o.id))
+        ));
         responseQueue=new LinkedBlockingQueue<>(workers*2);
         dataQueue=new LinkedBlockingQueue<>(workers*2);
     }

@@ -35,6 +35,7 @@ public class www{
         util.print("followee".hashCode()+"");
         util.print("topic".hashCode()+"");
         util.print("question".hashCode()%100+"");
+        util.print(String.format("%07d","abdds".charAt(0)<<8));
         fun(0);
         //ProxyProvider proxyProvider=new ProxyProvider(200);
 
