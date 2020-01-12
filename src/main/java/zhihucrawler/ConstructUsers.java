@@ -34,7 +34,7 @@ class ConstructUsers {
         StringBuilder users=new StringBuilder();
         for (String s : userMap.keySet()) {
             User user = userMap.get(s);
-            if(user.isRemoved){
+            if(user.isDone){
                 continue;
             }
             i++;
@@ -67,14 +67,14 @@ class ConstructUsers {
                 userMap.putIfAbsent(userID, new User(userID));
 
                 User user = userMap.get(userID);
-                if (user.isRemoved) {
+                if (user.isDone) {
                     continue;
                 }
                 try {
                     user.set(dataNode.type, dataNode.data, dataNode.id, dataNode.totalRequestNum);
                     if (user.isDone()) {
                         writeQueue.put(user);
-                        userMap.replace(user.userID,removedUser);
+                        userMap.replace(user.userID, removedUser);
                     }
                 } catch (JsonProcessingException e) {
                     errorUsers.put(userID, "JSON PROCESSING 1");

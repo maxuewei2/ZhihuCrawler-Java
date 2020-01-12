@@ -224,23 +224,22 @@ public class ZhihuCrawler {
             util.logInfo("put errorUsers in toCrawlQueue");*/
 
                 while (true) {
-                    LinkedList<String> tmp = new LinkedList<>();
                     synchronized (this) {
-                        for (String user : toVisit) {
+                        Iterator<String> it=toVisit.iterator();
+                        while (it.hasNext()){
+                            String user=it.next();
                             //所有用户都是先请求info数据，然后根据info构造其他数据请求
                             if (requests.getRequestQueue().offer(new RequestNode(user, "info"))) {
                                 visited.add(user);
-                                tmp.add(user);
+                                it.remove();
                             } else {
                                 break;
                             }
                         }
-                        toVisit.removeAll(tmp);
                     }
                     synchronized (requests.getRequestQueue()) {
                         requests.getRequestQueue().wait();
                     }
-                    tmp.clear();
                 }
             } catch (InterruptedException e) {
                 util.logWarning("Main offer thread interrupted",e);

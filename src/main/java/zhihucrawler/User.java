@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
+
 class User {
     public String userID;
     public String info;
@@ -25,11 +26,11 @@ class User {
     private Instant lastUpdate;
     private ReentrantLock lock = new ReentrantLock();
 
-    boolean isRemoved = false;
+    boolean isDone = false;
 
     //private static Pattern pattern = Pattern.compile("\"url_token\"\\s*:\\s*\"([^\"]+)\"");
-    User(boolean isRemoved) {
-        this.isRemoved = isRemoved;
+    User(boolean isDone) {
+        this.isDone = isDone;
     }
 
     User(String id) {
@@ -43,15 +44,21 @@ class User {
 
     /*用户的请求是否都已完成*/
     boolean isDone() {
-        lock.lock();
+        try {
+            lock.lock();
+            if(isDone){  //使isDone函数只返回一次真，从而只写入一次
+                return false;
+            }
         /*if (Duration.between(lastUpdate, Instant.now()).toSeconds() > 600) {
             util.logWarning(String.format("NotComplete %s %d %d %d %d", info, followersICount, followeesICount, topicsICount, questionsICount));
             lock.unlock();
             return true;
         }*/
-        boolean f = (info != null && followersICount == -1 && followeesICount == -1 && topicsICount == -1 && questionsICount == -1);
-        lock.unlock();
-        return f;
+            isDone = (info != null && followersICount == -1 && followeesICount == -1 && topicsICount == -1 && questionsICount == -1);
+            return isDone;
+        }finally {
+            lock.unlock();
+        }
     }
 
     @SuppressWarnings("unchecked")

@@ -1,9 +1,11 @@
 package zhihucrawler;
 
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.PriorityBlockingQueue;
 
 class RequestNode {
     String user;
@@ -77,7 +79,8 @@ class Requests{
         this.sleepMills=sleepMills;
         this.errorUsers=errorUsers;
         requestQueue=new LinkedBlockingQueue<>(workers*2);
-        requestQueue0=new LinkedBlockingQueue<>();
+        //requestQueue0=new LinkedBlockingQueue<>();
+        requestQueue0=new PriorityBlockingQueue<>(200, Comparator.comparingInt(o -> (o.user+o.type).hashCode()+o.id));
         responseQueue=new LinkedBlockingQueue<>(workers*2);
         dataQueue=new LinkedBlockingQueue<>(workers*2);
     }

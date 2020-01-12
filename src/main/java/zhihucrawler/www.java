@@ -18,19 +18,20 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class www{
-    static void fun()throws IOException{
-        util.print("hellow");
-        throw new IOException("fdsfds");
+    static int fun(int a){
 
+        try{
+            util.print("hellow");
+            if(a==0){
+                return 2;
+            }
+            return 1;
+        }finally {
+            util.print("fi");
+        }
     }
     public static void main(String [] args) throws JsonProcessingException,InterruptedException, IOException {
-        try{fun();}catch (IOException e){
-            if(e.getMessage().equals("fdsfds"))util.print("llll");
-            throw new IOException();
-
-        }finally {
-            util.print("");
-        }
+        fun(0);
 
         //ProxyProvider proxyProvider=new ProxyProvider(200);
 
