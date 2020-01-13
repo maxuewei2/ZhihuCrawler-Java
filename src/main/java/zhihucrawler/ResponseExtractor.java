@@ -30,7 +30,7 @@ class ResponseContent {
 }
 
 public class ResponseExtractor implements Runnable {
-    private static final AtomicInteger requestID = new AtomicInteger(0);
+    private static final AtomicInteger requestUserID = new AtomicInteger(0);
     private static final AtomicInteger receivedBytesNum = new AtomicInteger(0);
     private static final AtomicInteger receivedMBNum = new AtomicInteger(0);
     private static Instant last = Instant.now();
@@ -59,6 +59,8 @@ public class ResponseExtractor implements Runnable {
         if (user == null) {
             return;
         }
+        int reqUID=requestUserID.getAndIncrement();
+        int reqRID=0;
         for (int i = 0; i < types.length; i++) {
             String type = types[i];
             int totals = (int) info.get(infoKey[i]);
@@ -70,7 +72,8 @@ public class ResponseExtractor implements Runnable {
             String url = util.getUrl(user, type);
             for (int j = 0; j < totalRequestNum; j++) {
                 String newUrl = url.replace("offset=0", "offset=" + (j * 20));
-                requestQueue0.put(new RequestNode(user, type, newUrl, j, totalRequestNum, 0 , requestID.getAndIncrement()));
+                requestQueue0.put(new RequestNode(user, type, newUrl, j, totalRequestNum, 0 , reqUID*1000000L+reqRID));
+                reqRID++;
             }
         }
     }
@@ -90,7 +93,7 @@ public class ResponseExtractor implements Runnable {
                 int id = requestNode.id;
                 int oldTotalRequestNum = requestNode.totalRequestNum;
                 int tryCount = requestNode.tryCount;
-                int requestID=requestNode.requestID;
+                long requestID=requestNode.requestID;
 
                 /*累计收到的数据大小，每获取10MB，计算请求速度，并打印*/
 

@@ -4,6 +4,7 @@ target/
 state_bak.json
 init.sh
 cookie*
+!cookies.txt
 *.bin
 .idea/
 .git/

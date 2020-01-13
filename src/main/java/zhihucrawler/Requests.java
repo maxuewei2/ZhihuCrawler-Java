@@ -14,13 +14,13 @@ class RequestNode {
     int id;
     int totalRequestNum;
     int tryCount;
-    int requestID;
+    long requestID;
 
     RequestNode(String user, String type) {
         this(user, type, util.getUrl(user, type), 0, -1, 0, 0);
     }
 
-    RequestNode(String user, String type, String url, int id, int totalRequestNum, int tryCount, int requestID) {
+    RequestNode(String user, String type, String url, int id, int totalRequestNum, int tryCount, long requestID) {
         this.user = user;
         this.type = type;
         this.url = url;
@@ -81,7 +81,7 @@ class Requests {
         this.sleepMills = sleepMills;
         this.errorUsers = errorUsers;
         requestQueue = new LinkedBlockingQueue<>(workers * 2);
-        requestQueue0 = new PriorityBlockingQueue<>(200, Comparator.comparingInt(o -> (o.requestID)));
+        requestQueue0 = new PriorityBlockingQueue<>(200, Comparator.comparingLong(o -> (o.requestID)));
         responseQueue = new LinkedBlockingQueue<>(workers * 2);
         dataQueue = new LinkedBlockingQueue<>(workers * 2);
     }
