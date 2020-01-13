@@ -12,7 +12,6 @@ import java.time.Duration;
 import java.time.Instant;
 
 
-
 class Request {
     private final CookieProvider cookieProvider;
     private final ProxyProvider proxyProvider;
@@ -84,8 +83,8 @@ class Request {
                 userAgent = cookie.getUserAgent();
             }
         }
-        util.logInfo(Thread.currentThread().getName() + " using " + cookie + " " + proxy + " GET " + url);
         builder.setHeader("user-agent", userAgent);
+        util.logInfo(Thread.currentThread().getName() + " using " + cookie + " " + proxy + " GET " + url);
         HttpRequest request = builder.build();
         return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
     }

@@ -5,7 +5,7 @@
     <groupId>zhihucrawler</groupId>
     <artifactId>zhihu-crawler</artifactId>
     <packaging>jar</packaging>
-    <version>1.1</version>
+    <version>1.1.3</version>
     <build>
         <plugins>
             <plugin>

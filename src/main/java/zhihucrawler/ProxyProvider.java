@@ -1,7 +1,13 @@
 package zhihucrawler;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.ProxySelector;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.concurrent.*;
@@ -73,13 +79,21 @@ class ProxyProvider {
 
     /*测试代理*/
     boolean test(String proxyString){
-        Request testRequest=new Request(null,null,1);
-        testRequest.setProxy(new Proxy(proxyString));
         try {
-            testRequest.request("https://www.zhihu.com","");
+            Proxy proxy=new Proxy(proxyString);
+            HttpClient client=HttpClient.newBuilder()
+                    .version(HttpClient.Version.HTTP_1_1)
+                    .proxy(ProxySelector.of(new InetSocketAddress(proxy.getIP(), proxy.getPort())))
+                    .build();
+            HttpRequest.Builder builder = HttpRequest.newBuilder()
+                    .GET()
+                    .timeout(Duration.ofSeconds(5))
+                    .uri(URI.create("https://www.zhihu.com"));
+            client.send(builder.build(), responseInfo -> HttpResponse.BodySubscribers.discarding());
         } catch (InterruptedException e) {
             assert true;
         } catch (IOException e) {
+            util.logWarning("Request " + proxyString + " " + e.getMessage());
             return false;
         }
         return true;
@@ -111,21 +125,47 @@ class ProxyProvider {
         return proxyStrings;
     }
 
+    private void loadProxies(){
+        try {
+            Pattern pattern = Pattern.compile("(?:\\d{1,3}\\.){3}\\d{1,3}:\\d+");
+            String content = util.loadFile("proxies.txt");
+            String[] tmp = content.split("\n");
+            int i = 0;
+            while (i < tmp.length) {
+                ArrayList<String> pros = new ArrayList<>();
+                for (int j = 0; i < tmp.length && j < 200; j++, i++) {
+                    Matcher matcher = pattern.matcher(tmp[i]);
+                    if (matcher.find()) {
+                        pros.add(matcher.group());
+                    }
+                }
+                ArrayList<String> validPros = check(pros);
+                for (String pro : validPros) {
+                    proxies.put(new Proxy(pro));
+                    if (proxies.size() > maxNum) {
+                        synchronized (this) {
+                            this.wait();
+                        }
+                    }
+                }
+                Thread.sleep(1000);
+            }
+            util.print("#proxies after load file "+proxies.size());
+        }catch (IOException e){
+
+        }catch (InterruptedException e){
+            Thread.currentThread().interrupt();
+        }
+    }
+
     /*循环爬取代理网站1-20页，直到proxies中代理数量大于maxNum*/
     @SuppressWarnings("unchecked")
     private void crawlProxies(){
         Request request=new Request(null,null,3);
         //request.setProxy(new Proxy("127.0.0.1:12333"));
         try {
-            /*String content=util.loadFile("proxies.txt");
-            ArrayList<String> tmp=util.loadJsonString(content,ArrayList.class);
-            for(String s:tmp){
-                Proxy proxy=new Proxy(s);
-                if(test(testRequest,proxy)) {
-                    proxies.offer(new Proxy(s));
-                }
-            }
-            request.changeProxy();*/
+            loadProxies();
+            //request.changeProxy();
             while(true){
                 boolean fullFlag=false;
                 int pageNum=1;
@@ -166,7 +206,7 @@ class ProxyProvider {
                 return null;
             }
             if (proxy.isValid()) {
-                proxies.offerFirst(proxy);
+                proxies.offerLast(proxy);
                 return proxy;
             } else {
                 if (proxies.size() < minNum) {
@@ -177,6 +217,4 @@ class ProxyProvider {
             }
         }
     }
-
-
 }

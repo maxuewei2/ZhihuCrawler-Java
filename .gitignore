@@ -1,7 +1,8 @@
 data/*.json
 target/
 新建文件夹/*
-state.json
+state_bak.json
+init.sh
 cookie*
 *.bin
 .idea/
@@ -15,3 +16,4 @@ pom1.xml
 *.iml
 create_zip.sh
 .fuse*
+src/main/java/zhihucrawler/www.java

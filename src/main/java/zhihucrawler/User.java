@@ -46,7 +46,7 @@ class User {
     boolean isDone() {
         try {
             lock.lock();
-            if(isDone){  //使isDone函数只返回一次真，从而只写入一次
+            if (isDone) {  //使isDone函数只返回一次真，从而只写入一次
                 return false;
             }
         /*if (Duration.between(lastUpdate, Instant.now()).toSeconds() > 600) {
@@ -56,7 +56,7 @@ class User {
         }*/
             isDone = (info != null && followersICount == -1 && followeesICount == -1 && topicsICount == -1 && questionsICount == -1);
             return isDone;
-        }finally {
+        } finally {
             lock.unlock();
         }
     }
@@ -107,7 +107,7 @@ class User {
             if (topics == null) {
                 topics = new StringBuilder(totals * 20 * 200);
             }
-            String del = topics.length() == 0|content.equals("[]")|content.equals("[ ]") ? "" : ",";
+            String del = topics.length() == 0 | content.equals("[]") | content.equals("[ ]") ? "" : ",";
             topics.append(del).append(content, 1, content.length() - 1);
             if (topicsICount != -1 && ++topicsICount >= totals) {
                 topicsICount = -1;
@@ -120,7 +120,7 @@ class User {
             if (questions == null) {
                 questions = new StringBuilder(totals * 20 * 200);
             }
-            String del = questions.length() == 0|content.equals("[]")|content.equals("[ ]") ? "" : ",";
+            String del = questions.length() == 0 | content.equals("[]") | content.equals("[ ]") ? "" : ",";
             questions.append(del).append(content, 1, content.length() - 1);
             if (questionsICount != -1 && ++questionsICount >= totals) {
                 questionsICount = -1;

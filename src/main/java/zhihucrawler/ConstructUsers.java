@@ -16,7 +16,7 @@ class ConstructUsers {
     private final BlockingQueue<DataNode> dataQueue;
     private final BlockingQueue<User> writeQueue;
     private final ConcurrentMap<String, String> errorUsers;
-    private User removedUser=new User(true);
+    private User removedUser = new User(true);
 
     ConstructUsers(int workers,
                    BlockingQueue<DataNode> dataQueue,
@@ -29,27 +29,27 @@ class ConstructUsers {
     }
 
     private void checkMap(int flag) {
-        int i=0;
+        int i = 0;
         //long x=0;
-        StringBuilder users=new StringBuilder();
+        StringBuilder users = new StringBuilder();
         for (String s : userMap.keySet()) {
             User user = userMap.get(s);
-            if(user.isDone){
+            if (user.isDone) {
                 continue;
             }
             i++;
             users.append("\n In Map").append(user.getString());
             //if(flag==1)x+=user.getString().length();
             if (errorUsers.containsKey(s)) {
-                userMap.replace(s,removedUser);
+                userMap.replace(s, removedUser);
             }
         }
-        util.logInfo("MapSize " + userMap.size()+" valid users "+i+users);
+        util.logInfo("MapSize " + userMap.size() + " valid users " + i + users);
         //if(flag==1)util.logInfo(String.format("MapData %.3f MB ",x/1000000.0));
     }
 
     private void doTask() {
-        Instant last=Instant.now();
+        Instant last = Instant.now();
         try {
             while (true) {
                 synchronized (this) {
@@ -78,12 +78,12 @@ class ConstructUsers {
                     }
                 } catch (JsonProcessingException e) {
                     errorUsers.put(userID, "JSON PROCESSING 1");
-                    userMap.replace(user.userID,removedUser);
+                    userMap.replace(user.userID, removedUser);
                     util.logWarning("ERRORUSER 1 " + userID);
                 }
             }
         } catch (InterruptedException e) {
-            util.logWarning("ConstructUsers Interrupted",e);
+            util.logWarning("ConstructUsers Interrupted", e);
             Thread.currentThread().interrupt();
         }
     }

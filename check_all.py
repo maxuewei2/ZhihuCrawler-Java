@@ -1,27 +1,39 @@
 import json
 import sys
 import os
-
+        
 def check_one(filename):
     with open(filename) as f:
         j=json.load(f)
 
         user=j['userID']
-        if j['info']['follower_count']!=len(set(j['followers'])):
-            return user+" "+"follower"+' {} {}'.format(j['info']['follower_count'],len(set(j['followers'])))
-        if j['info']['following_count']!=len(set(j['followees'])):
-            return user+" "+"followee"+' {} {}'.format(j['info']['following_count'],len(set(j['followees'])))
-        if j['info']['following_topic_count']!=len(j['topics']):
-            return user+" "+"topic"+' {} {}'.format(j['info']['following_topic_count'],len(j['topics']))
-        #if j['info']['following_question_count']!=len(j['questions']):
-        #    return user+" "+"question"+' {} {}'.format(j['info']['following_question_count'],len(j['questions']))
+        info=j['info']
+        
+        a,b=info['follower_count'],len(set(j['followers']))
+        if a!=b:
+            return '{} follower {} {}'.format(user,a,b)
+        
+        a,b=info['following_count'],len(set(j['followees']))
+        if a!=b:
+            return '{} followee {} {}'.format(user,a,b)
+        
+        a,b=info['following_topic_count'],len(j['topics'])
+        if a!=b:
+            return '{} topic    {} {}'.format(user,a,b)
+        
+        #a,b=info['following_question_count'],len(j['questions'])
+        #if a!=b:
+        #    return '{} question {} {}'.format(user,a,b)
         return ''
         
-for filename in os.listdir('data'):
+files=os.listdir('data')
+files.remove('.empty')        
+for filename in files:
+    
     try:
         r=check_one('data/'+filename)
         if r:
             print(r)
     except Exception :
-        print("exception ",filename)  
+        print(filename, "json parsing error ")  
     

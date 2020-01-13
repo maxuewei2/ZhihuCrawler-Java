@@ -1,9 +1,10 @@
 {
-"cookieFileName":"cookies.json",
-"stateFileName":"state.json",
-"maxTryNum":3,
-"parallelRequests":10,
-"dataDirName":"data",
-"verbose":true,
-"sleepMills": 5000
+    "cookieFileName":"cookies.txt",
+    "userAgentFileName":"user-agents.txt",
+    "stateFileName":"state.json",
+    "maxTryNum":3,
+    "parallelRequests":10,
+    "dataDirName":"data",
+    "verbose":true,
+    "sleepMills": 5000
 }

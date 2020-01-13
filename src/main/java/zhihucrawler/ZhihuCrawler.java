@@ -12,6 +12,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.*;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 
@@ -23,7 +24,7 @@ public class ZhihuCrawler {
     private ConcurrentHashMap<String, String> errorUsers;  //存储出错的用户
 
     private ZhihuCrawler(String configFileName, String logFileName) throws IOException {
-        String content=loadConfig(configFileName);
+        String content = loadConfig(configFileName);
         checkConfig();
         util.setLogger(initLogger(logFileName));
         util.logInfo("config: " + content);
@@ -36,14 +37,14 @@ public class ZhihuCrawler {
         return content;
     }
 
-    void checkConfig()throws IOException{
-        if(config.parallelRequests==0){
+    void checkConfig() throws IOException {
+        if (config.parallelRequests == 0) {
             throw new IOException("Config error. parallelRequests is 0");
         }
-        if(config.maxTryNum==0){
+        if (config.maxTryNum == 0) {
             throw new IOException("Config error. maxTryNum is 0");
         }
-        if(config.sleepMills==0){
+        if (config.sleepMills == 0) {
             throw new IOException("Config error. sleepMills is 0");
         }
     }
@@ -79,7 +80,7 @@ public class ZhihuCrawler {
     }
 
     /*保存当前进度到一个json文件*/
-    private void saveState() {
+    private synchronized void saveState() {
         HashMap<String, Collection<?>> tmp = new HashMap<>();
         tmp.put("toVisit", toVisit);
         tmp.put("visited", visited);
@@ -107,9 +108,10 @@ public class ZhihuCrawler {
     private void startCrawler() throws IOException {
         loadState();
         /*
-        * main -> Requests.requestQueue -> Requests.dataQueue -> writeQueue -> files
-        * */
-        Requests requests = new Requests(config.cookieFileName, config.parallelRequests, config.maxTryNum, config.sleepMills, errorUsers);
+         * main -> Requests.requestQueue -> Requests.dataQueue -> writeQueue -> files
+         * */
+        Requests requests = new Requests(config.cookieFileName, config.userAgentFileName, config.parallelRequests,
+                config.maxTryNum, config.sleepMills, errorUsers);
 
         LinkedBlockingQueue<User> writeQueue = new LinkedBlockingQueue<>(config.parallelRequests);
 
@@ -118,16 +120,15 @@ public class ZhihuCrawler {
         requests.startThreads();
 
         /*监测线程
-        * - 定时gc
-        * - 定时打印数据情况
-        * - 到一定时间退出程序
-        * */
+         * - 定时gc
+         * - 定时打印数据情况
+         * */
         new Thread(() -> {
             int i = 0;
             while (true) {
                 try {
                     Thread.sleep(1000);
-                    if(requests.aliveRequestNum==0){
+                    if (requests.aliveRequestNum == 0) {
                         util.logSevere("no alive request threads left.");
                         cleanBeforeShutdown(this);
                         System.exit(0);
@@ -147,13 +148,14 @@ public class ZhihuCrawler {
                                 "\n\terrorUsers " + errorUsers.size()
                         );
                     }
-                    /*if (i > (3600 * 6)) {
+                    /* 到一定时间退出程序
+                    if (i > (3600 * 6)) {
                         util.logInfo("exit after 6 hour.");
                         System.exit(0);
                     }*/
                     i++;
                 } catch (InterruptedException e) {
-                    util.logWarning("Main monitor thread Interrupted",e);
+                    util.logWarning("Main monitor thread Interrupted", e);
                     Thread.currentThread().interrupt();
                 }
 
@@ -161,9 +163,9 @@ public class ZhihuCrawler {
         }).start();
 
         /*写数据线程
-        * - 从writeQueue取用户数据并写入文件
-        * - 将该用户的好友加入toVisit集合
-        * - 保存当前进度*/
+         * - 从writeQueue取用户数据并写入文件
+         * - 将该用户的好友加入toVisit集合
+         * - 保存当前进度*/
         new Thread(() -> {
             try {
                 Instant last = Instant.now();
@@ -202,32 +204,24 @@ public class ZhihuCrawler {
                     user.info = null;
 
                     if (Duration.between(last, Instant.now()).toSeconds() > 600) {
-                        synchronized (this) {
-                            saveState();
-                        }
+                        saveState();
                         last = Instant.now();
                     }
                 }
             } catch (InterruptedException e) {
-                util.logWarning("Main write thread interrupted",e);
+                util.logWarning("Main write thread interrupted", e);
                 Thread.currentThread().interrupt();
             }
         }).start();
 
         /*将toVisit中的用户加入Requests的队列*/
-        new Thread(()-> {
+        new Thread(() -> {
             try {
-            /*for (String user : errorUsers.keySet()) {
-                crawlUsers.getToCrawlUsersQueue().put(user);
-                errorUsers.remove(user);
-            }
-            util.logInfo("put errorUsers in toCrawlQueue");*/
-
                 while (true) {
                     synchronized (this) {
-                        Iterator<String> it=toVisit.iterator();
-                        while (it.hasNext()){
-                            String user=it.next();
+                        Iterator<String> it = toVisit.iterator();
+                        while (it.hasNext()) {
+                            String user = it.next();
                             //所有用户都是先请求info数据，然后根据info构造其他数据请求
                             if (requests.getRequestQueue().offer(new RequestNode(user, "info"))) {
                                 visited.add(user);
@@ -242,7 +236,7 @@ public class ZhihuCrawler {
                     }
                 }
             } catch (InterruptedException e) {
-                util.logWarning("Main offer thread interrupted",e);
+                util.logWarning("Main offer thread interrupted", e);
                 Thread.currentThread().interrupt();
             }
         }).start();
@@ -274,23 +268,23 @@ public class ZhihuCrawler {
         return logger;
     }
 
-    private static void cleanBeforeShutdown(ZhihuCrawler crawler){
+    private static void cleanBeforeShutdown(ZhihuCrawler crawler) {
         crawler.saveState();
     }
 
     public static void main(String[] args) {
         try {
-            util.print("config file: "+ args[0]);
-            util.print("log file: "+ args[1]);
-            String configFileName=args[0];
-            String logFileName=args[1];
+            util.print("config file: " + args[0]);
+            util.print("log file: " + args[1]);
+            util.print("");
+            String configFileName = args[0];
+            String logFileName = args[1];
             ZhihuCrawler crawler = new ZhihuCrawler(configFileName, logFileName);
             crawler.startCrawler();
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 cleanBeforeShutdown(crawler);
-                String msg=String.format("System shutdown at %s.", LocalDateTime.now());
+                String msg = String.format("System shutdown at %s.", LocalDateTime.now());
                 util.print(msg);
-                util.logWarning(msg);
             }));
         } catch (IOException e) {
             util.logSevere("IOException", e);
